@@ -1,58 +1,53 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  format, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameMonth, 
-  isSameDay, 
-  addMonths, 
+import React, { useState, useMemo } from 'react';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  addMonths,
   subMonths,
   isToday,
   isWithinInterval
 } from 'date-fns';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
-  Users, 
-  BrainCircuit, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  BrainCircuit,
   Calendar as CalendarIcon,
-  Filter,
   Factory,
   Package
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Modal } from './components/Modal';
-import { Button } from './components/Button';
+import { Modal } from '../../components/Modal';
+import { Button } from '../../components/Button';
 import { AIAssistant } from './components/AIAssistant';
 import { TEAM_MEMBERS, INITIAL_EVENTS } from './constants';
-import { CalendarEvent, TeamMember, EventType } from './types';
+import { CalendarEvent, EventType } from './types';
 import { generateWeeklySummary } from './services/geminiService';
 
-const App: React.FC = () => {
+const CalendarApp: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
   const [isAIAddOpen, setIsAIAddOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
-  
-  // New Event Form State
+
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventMember, setNewEventMember] = useState(TEAM_MEMBERS[0].id);
   const [newEventType, setNewEventType] = useState<EventType>('manufacturing');
   const [newEventStart, setNewEventStart] = useState('');
   const [newEventEnd, setNewEventEnd] = useState('');
 
-  // Weekly Summary
   const [summary, setSummary] = useState<string | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   const daysInMonth = useMemo(() => {
-    // Explicitly set weekStartsOn: 0 for Sunday start
     const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 });
     const end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 });
     return eachDayOfInterval({ start, end });
@@ -68,10 +63,9 @@ const App: React.FC = () => {
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
-    // Pre-fill form
     setNewEventStart(format(date, "yyyy-MM-dd'T'09:00"));
     setNewEventEnd(format(date, "yyyy-MM-dd'T'17:00"));
-    setNewEventType('manufacturing'); // Default
+    setNewEventType('manufacturing');
     setIsEventModalOpen(true);
   };
 
@@ -99,11 +93,10 @@ const App: React.FC = () => {
 
   const handleGenerateSummary = async () => {
     setIsGeneratingSummary(true);
-    // Get events for the currently viewed month
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
-    
-    const visibleEvents = events.filter(e => 
+
+    const visibleEvents = events.filter(e =>
       isWithinInterval(e.start, { start: monthStart, end: monthEnd }) ||
       isWithinInterval(e.end, { start: monthStart, end: monthEnd })
     );
@@ -147,10 +140,10 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-2 mr-4 bg-slate-50 p-1 rounded-lg border border-slate-200">
-            <button 
+            <button
               onClick={() => setSelectedMemberFilter(null)}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${!selectedMemberFilter ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
@@ -179,7 +172,7 @@ const App: React.FC = () => {
           </Button>
         </div>
       </header>
-      
+
       {/* Summary Banner */}
       {summary && (
         <div className="bg-purple-50 px-6 py-3 border-b border-purple-100 flex justify-between items-start animate-fade-in">
@@ -200,7 +193,6 @@ const App: React.FC = () => {
       {/* Main Calendar Grid */}
       <div className="flex flex-auto overflow-hidden">
         <div className="flex flex-auto flex-col">
-          {/* Weekday Headers */}
           <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold leading-6 text-slate-500 lg:flex-none">
             <div className="bg-white py-2 text-rose-500">Sun</div>
             <div className="bg-white py-2">Mon</div>
@@ -211,44 +203,36 @@ const App: React.FC = () => {
             <div className="bg-white py-2 text-rose-500">Sat</div>
           </div>
 
-          {/* Days Grid */}
           <div className="flex bg-slate-200 text-xs leading-6 text-slate-700 lg:flex-auto">
             <div className="hidden w-full lg:grid lg:grid-cols-7 lg:grid-rows-5 lg:gap-px">
               {daysInMonth.map((day) => {
-                const dayEvents = filteredEvents.filter(event => 
-                  isSameDay(event.start, day) || 
+                const dayEvents = filteredEvents.filter(event =>
+                  isSameDay(event.start, day) ||
                   (isWithinInterval(day, { start: event.start, end: event.end }))
                 );
-                
-                // Helper to detect if this is the start of a multi-day event to render the pill correctly
+
                 const getEventStyle = (event: CalendarEvent) => {
                     const member = getMemberById(event.memberId);
-                    
                     let classes = `group flex flex-col px-2 py-1 text-xs leading-5 hover:opacity-90 transition-opacity cursor-pointer mb-1 rounded mx-1 `;
-                    
                     if (member) {
                         classes += member.color;
                     } else {
                         classes += ' bg-gray-100 text-gray-700';
                     }
-
                     return classes;
                 };
 
                 return (
-                  <div 
-                    key={day.toString()} 
+                  <div
+                    key={day.toString()}
                     onClick={() => handleDateClick(day)}
                     className={`relative min-h-[120px] bg-white px-2 py-2 hover:bg-slate-50 transition-colors ${
                       !isSameMonth(day, currentDate) ? 'bg-slate-50 text-slate-400' : ''
                     }`}
                   >
-                    <time 
+                    <time
                         dateTime={format(day, 'yyyy-MM-dd')}
-                        className={`
-                            flex h-6 w-6 items-center justify-center rounded-full 
-                            ${isToday(day) ? 'bg-primary-600 text-white font-bold' : isSameMonth(day, currentDate) ? 'font-medium' : ''}
-                        `}
+                        className={`flex h-6 w-6 items-center justify-center rounded-full ${isToday(day) ? 'bg-primary-600 text-white font-bold' : isSameMonth(day, currentDate) ? 'font-medium' : ''}`}
                     >
                       {format(day, 'd')}
                     </time>
@@ -275,13 +259,13 @@ const App: React.FC = () => {
                 );
               })}
             </div>
-            
-            {/* Mobile View (simplified stack) */}
+
+            {/* Mobile View */}
             <div className="lg:hidden w-full bg-white overflow-y-auto">
                  {daysInMonth.map((day) => {
                      const dayEvents = filteredEvents.filter(event => isWithinInterval(day, { start: event.start, end: event.end }));
                      if (!isSameMonth(day, currentDate)) return null;
-                     
+
                      return (
                          <div key={day.toString()} className="border-b border-slate-100 p-4">
                              <div className="flex items-center mb-3">
@@ -321,16 +305,16 @@ const App: React.FC = () => {
       </div>
 
       {/* Manual Add Event Modal */}
-      <Modal 
-        isOpen={isEventModalOpen} 
+      <Modal
+        isOpen={isEventModalOpen}
         onClose={() => setIsEventModalOpen(false)}
         title="Add New Event"
       >
         <form onSubmit={handleManualSubmit} className="space-y-4">
             <div>
                 <label className="block text-sm font-medium text-slate-700">Event Title</label>
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     required
                     value={newEventTitle}
                     onChange={(e) => setNewEventTitle(e.target.value)}
@@ -338,18 +322,18 @@ const App: React.FC = () => {
                     placeholder="e.g. Batch #404"
                 />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Event Type</label>
               <div className="grid grid-cols-2 gap-3">
-                 <div 
+                 <div
                     onClick={() => setNewEventType('manufacturing')}
                     className={`cursor-pointer border rounded-lg p-3 flex items-center justify-center gap-2 transition-all ${newEventType === 'manufacturing' ? 'bg-amber-50 border-amber-500 text-amber-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                  >
                     <Factory className="w-5 h-5" />
                     <span className="font-medium">제조 (Mfg)</span>
                  </div>
-                 <div 
+                 <div
                     onClick={() => setNewEventType('packaging')}
                     className={`cursor-pointer border rounded-lg p-3 flex items-center justify-center gap-2 transition-all ${newEventType === 'packaging' ? 'bg-blue-50 border-blue-500 text-blue-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                  >
@@ -362,8 +346,8 @@ const App: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-slate-700">Start</label>
-                    <input 
-                        type="datetime-local" 
+                    <input
+                        type="datetime-local"
                         required
                         value={newEventStart}
                         onChange={(e) => setNewEventStart(e.target.value)}
@@ -372,8 +356,8 @@ const App: React.FC = () => {
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-slate-700">End</label>
-                    <input 
-                        type="datetime-local" 
+                    <input
+                        type="datetime-local"
                         required
                         value={newEventEnd}
                         onChange={(e) => setNewEventEnd(e.target.value)}
@@ -385,13 +369,10 @@ const App: React.FC = () => {
                 <label className="block text-sm font-medium text-slate-700">Assign To</label>
                 <div className="mt-1 grid grid-cols-2 gap-2">
                     {TEAM_MEMBERS.map(member => (
-                        <div 
+                        <div
                             key={member.id}
                             onClick={() => setNewEventMember(member.id)}
-                            className={`
-                                cursor-pointer flex items-center gap-2 p-2 rounded-md border transition-all
-                                ${newEventMember === member.id ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-slate-200 hover:bg-slate-50'}
-                            `}
+                            className={`cursor-pointer flex items-center gap-2 p-2 rounded-md border transition-all ${newEventMember === member.id ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-slate-200 hover:bg-slate-50'}`}
                         >
                             <img src={member.avatar} className="w-6 h-6 rounded-full" />
                             <span className="text-sm font-medium text-slate-700">{member.name}</span>
@@ -407,13 +388,13 @@ const App: React.FC = () => {
       </Modal>
 
       {/* AI Sidebar */}
-      <AIAssistant 
-        isOpen={isAIAddOpen} 
-        onClose={() => setIsAIAddOpen(false)} 
+      <AIAssistant
+        isOpen={isAIAddOpen}
+        onClose={() => setIsAIAddOpen(false)}
         onAddEvent={addEvent}
       />
     </div>
   );
 };
 
-export default App;
+export default CalendarApp;

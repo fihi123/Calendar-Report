@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Send, CalendarPlus, Check, X, Package, Factory } from 'lucide-react';
-import { Button } from './Button';
+import { Button } from '../../../components/Button';
 import { parseEventFromText } from '../services/geminiService';
 import { AIParsedEvent, CalendarEvent, TeamMember } from '../types';
 import { TEAM_MEMBERS } from '../constants';
@@ -26,12 +26,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ onAddEvent, isOpen, on
     setParsedResult(null);
 
     const result = await parseEventFromText(input, new Date());
-    
+
     setIsProcessing(false);
     if (result) {
       setParsedResult(result);
     } else {
-      // Simple error feedback
       alert("I couldn't understand that. Please try to be more specific with dates and names.");
     }
   };
@@ -39,9 +38,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ onAddEvent, isOpen, on
   const handleConfirm = () => {
     if (!parsedResult) return;
 
-    // Map AI assignee name to actual team member ID
-    const assignee = TEAM_MEMBERS.find(m => 
-      m.name.toLowerCase().includes(parsedResult.assigneeName.toLowerCase()) || 
+    const assignee = TEAM_MEMBERS.find(m =>
+      m.name.toLowerCase().includes(parsedResult.assigneeName.toLowerCase()) ||
       parsedResult.assigneeName.toLowerCase().includes(m.name.split(' ')[0].toLowerCase())
     );
 

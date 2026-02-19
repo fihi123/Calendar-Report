@@ -2,7 +2,7 @@ export interface TeamMember {
   id: string;
   name: string;
   role: string;
-  color: string; // Tailwind class for background, e.g., 'bg-red-100 text-red-700'
+  color: string;
   avatar: string;
 }
 
@@ -21,9 +21,9 @@ export interface CalendarEvent {
 export interface AIParsedEvent {
   title: string;
   description: string;
-  startDate: string; // ISO string
-  endDate: string; // ISO string
-  assigneeName: string; // To match against TeamMember
+  startDate: string;
+  endDate: string;
+  assigneeName: string;
   type: string;
 }
 

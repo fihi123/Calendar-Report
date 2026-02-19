@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   format,
   startOfMonth,
@@ -21,7 +22,8 @@ import {
   Calendar as CalendarIcon,
   Factory,
   Package,
-  Settings
+  Settings,
+  FileText
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Modal } from '../../components/Modal';
@@ -46,6 +48,7 @@ const loadTeamMembers = (): TeamMember[] => {
 };
 
 const CalendarApp: React.FC = () => {
+  const navigate = useNavigate();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(loadTeamMembers);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
@@ -89,6 +92,19 @@ const CalendarApp: React.FC = () => {
     setNewEventEnd(format(date, "yyyy-MM-dd'T'17:00"));
     setNewEventType('manufacturing');
     setIsEventModalOpen(true);
+  };
+
+  const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (event.type === 'manufacturing' || event.type === 'packaging') {
+      navigate('/report', {
+        state: {
+          date: format(event.start, 'yyyy-MM-dd'),
+          title: event.title,
+          type: event.type,
+        },
+      });
+    }
   };
 
   const addEvent = (event: CalendarEvent) => {
@@ -269,13 +285,16 @@ const CalendarApp: React.FC = () => {
                       {dayEvents.map(event => {
                          const member = getMemberById(event.memberId);
                          return (
-                            <div key={event.id} className={getEventStyle(event)}>
+                            <div key={event.id} className={getEventStyle(event)} onClick={(e) => handleEventClick(event, e)}>
                                 <div className="flex items-center gap-1">
                                     {member && <img src={member.avatar} className="w-4 h-4 rounded-full border border-white/50 flex-shrink-0" />}
                                     <div className="overflow-hidden">
                                       <div className="flex items-center">
                                         {getTypeBadge(event.type)}
                                         <span className="font-semibold truncate">{event.title}</span>
+                                        {(event.type === 'manufacturing' || event.type === 'packaging') && (
+                                          <FileText size={10} className="ml-1 opacity-40 flex-shrink-0" />
+                                        )}
                                       </div>
                                     </div>
                                 </div>
@@ -309,11 +328,14 @@ const CalendarApp: React.FC = () => {
                                  {dayEvents.map(event => {
                                      const member = getMemberById(event.memberId);
                                      return (
-                                         <div key={event.id} className={`p-3 rounded-lg border-l-4 ${member?.color} bg-white shadow-sm border border-slate-100`}>
+                                         <div key={event.id} className={`p-3 rounded-lg border-l-4 ${member?.color} bg-white shadow-sm border border-slate-100 cursor-pointer`} onClick={(e) => handleEventClick(event, e)}>
                                              <div className="flex justify-between items-start">
                                                  <div className="flex items-center gap-2">
                                                     {getTypeBadge(event.type)}
                                                     <span className="font-medium text-slate-900">{event.title}</span>
+                                                    {(event.type === 'manufacturing' || event.type === 'packaging') && (
+                                                      <FileText size={12} className="opacity-40 flex-shrink-0" />
+                                                    )}
                                                  </div>
                                                  <span className="text-xs text-slate-500">{format(event.start, 'h:mm a')}</span>
                                              </div>

@@ -2,7 +2,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AIParsedEvent } from "../types";
 
 const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+let ai: GoogleGenAI | null = null;
+try {
+  if (apiKey) ai = new GoogleGenAI({ apiKey });
+} catch (e) {
+  console.warn("Gemini API initialization skipped:", e);
+}
 
 export const parseEventFromText = async (text: string, currentDate: Date, memberNames: string[] = []): Promise<AIParsedEvent | null> => {
   if (!apiKey) {

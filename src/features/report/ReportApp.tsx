@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import ReportPreview from './components/ReportPreview';
 import EditorPanel from './components/EditorPanel';
-import { ReportData } from './types';
-import { Printer, Save, FileUp, Menu, X } from 'lucide-react';
+import { ReportData, ReportType } from './types';
+import { Printer, Save, FileUp, Menu, X, FileDown, Table } from 'lucide-react';
+import { exportToPdf, exportToExcel } from './utils/exportUtils';
+
+interface CalendarLinkState {
+  date: string;
+  title: string;
+  type: 'manufacturing' | 'packaging';
+}
 
 const initialData: ReportData = {
   reportType: 'single-manufacturing',
@@ -50,8 +58,31 @@ const initialData: ReportData = {
 };
 
 const ReportApp: React.FC = () => {
+  const location = useLocation();
   const [reportData, setReportData] = useState<ReportData>(initialData);
   const [showEditor, setShowEditor] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Feature 1: Pre-populate from calendar event
+  useEffect(() => {
+    const state = location.state as CalendarLinkState | null;
+    if (state?.date && state?.title) {
+      const reportType: ReportType = state.type === 'packaging'
+        ? 'single-filling'
+        : 'single-manufacturing';
+
+      setReportData(prev => ({
+        ...prev,
+        date: state.date,
+        reportType,
+        info: prev.info.map(item =>
+          item.label.includes('제품명') ? { ...item, value: state.title } : item
+        ),
+      }));
+
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -66,6 +97,27 @@ const ReportApp: React.FC = () => {
     link.download = `report_${reportData.date}.json`;
     link.click();
     URL.revokeObjectURL(url);
+  }, [reportData]);
+
+  const handleExportPdf = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      await exportToPdf(`report_${reportData.date}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('PDF 내보내기에 실패했습니다.');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [reportData.date]);
+
+  const handleExportExcel = useCallback(() => {
+    try {
+      exportToExcel(reportData);
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      alert('엑셀 내보내기에 실패했습니다.');
+    }
   }, [reportData]);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,6 +207,23 @@ const ReportApp: React.FC = () => {
           <div className="h-5 w-px bg-gray-200 mx-0.5"></div>
           <button onClick={() => setShowEditor(!showEditor)} className="flex items-center gap-1.5 text-gray-500 hover:text-brand-700 hover:bg-gray-100 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium" title="Toggle Editor (Ctrl+E)">
             {showEditor ? <><X size={14} /> Close</> : <><Menu size={14} /> Editor</>}
+          </button>
+          <button
+            onClick={handleExportPdf}
+            disabled={isExporting}
+            className="flex items-center gap-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium"
+            title="PDF로 저장"
+          >
+            <FileDown size={14} />
+            <span className="hidden sm:inline">{isExporting ? '변환 중...' : 'PDF 저장'}</span>
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium"
+            title="엑셀로 다운로드"
+          >
+            <Table size={14} />
+            <span className="hidden sm:inline">엑셀</span>
           </button>
           <button onClick={handlePrint} className="flex items-center gap-1.5 bg-brand-700 text-white hover:bg-brand-800 px-3 py-1.5 rounded-md transition-all text-xs font-bold shadow-sm" title="Print to PDF (Ctrl+P)">
             <Printer size={14} />

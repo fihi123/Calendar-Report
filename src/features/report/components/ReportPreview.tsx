@@ -413,8 +413,8 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
             <div className="grid grid-cols-2 gap-4">
               {data.images.map((img, i) => (
                 <div key={i} className="border border-black bg-white p-2 relative shadow-sm break-inside-avoid">
-                  <div className="h-40 flex items-center justify-center overflow-hidden bg-gray-100 border border-gray-200">
-                     <img src={img} alt={`현장 사진 ${i+1}`} className="max-w-full max-h-full object-contain" />
+                  <div className="h-48 flex items-center justify-center overflow-hidden bg-gray-100 border border-gray-200">
+                     <img src={img} alt={`현장 사진 ${i+1}`} className="max-w-full max-h-full object-contain" crossOrigin="anonymous" />
                   </div>
                   <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
                     <span className="text-[10px] font-bold text-gray-600 uppercase">Figure {i+1}</span>

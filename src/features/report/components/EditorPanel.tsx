@@ -14,6 +14,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
   const [showFullTemplateMenu, setShowFullTemplateMenu] = useState(false);
   const [activeLotIndex, setActiveLotIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const templateMenuRef = useRef<HTMLDivElement>(null);
   const fullTemplateMenuRef = useRef<HTMLDivElement>(null);
 
@@ -134,6 +135,20 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
     }
   };
   const removeImage = (idx: number) => { onChange({ ...data, images: data.images.filter((_, i) => i !== idx) }); };
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      Array.from(files).filter(f => f.type.startsWith('image/')).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => { onChange({ ...data, images: [...data.images, ev.target?.result as string] }); };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
 
   const handleAIAnalyze = async () => {
     setIsGenerating('analysis');
@@ -381,19 +396,40 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
         {/* Photos */}
         <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex justify-between items-center mb-4">
-             <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">현장 사진</h3>
+             <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">현장 사진 ({data.images.length})</h3>
              <label className="cursor-pointer bg-brand-50 hover:bg-brand-100 text-brand-700 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-colors border border-brand-200"><Upload size={12} />Add Photo<input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" /></label>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-             {data.images.map((img, idx) => (
-               <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-                 <img src={img} alt="thumb" className="w-full h-full object-cover" />
-                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button onClick={() => removeImage(idx)} className="bg-white/20 hover:bg-red-500 text-white p-1.5 rounded-full backdrop-blur-sm transition-colors"><Trash2 size={14} /></button>
-                 </div>
-               </div>
-             ))}
-             {data.images.length === 0 && <div className="col-span-3 py-6 text-center text-xs text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">No photos uploaded</div>}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-lg transition-all duration-200 p-3 ${isDragging ? 'border-brand-500 bg-brand-50 scale-[1.01]' : 'border-gray-200 bg-gray-50/50'}`}
+          >
+            {data.images.length === 0 ? (
+              <div className="py-8 text-center">
+                <Upload size={24} className="mx-auto mb-2 text-gray-300" />
+                <p className="text-xs text-gray-400">{isDragging ? '여기에 놓으세요!' : '사진을 드래그하거나 위 버튼을 클릭하세요'}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {data.images.map((img, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50 shadow-sm">
+                    <img src={img} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button onClick={() => removeImage(idx)} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors" title="사진 삭제"><Trash2 size={14} /></button>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
+                      <span className="text-[9px] text-white font-bold">#{idx + 1}</span>
+                    </div>
+                  </div>
+                ))}
+                <label className="aspect-square rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors">
+                  <Plus size={20} className="text-gray-400 mb-1" />
+                  <span className="text-[9px] text-gray-400 font-medium">추가</span>
+                  <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </label>
+              </div>
+            )}
           </div>
         </section>
 

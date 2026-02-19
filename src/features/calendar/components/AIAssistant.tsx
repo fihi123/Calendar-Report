@@ -3,7 +3,6 @@ import { Sparkles, Send, CalendarPlus, Check, X, Package, Factory } from 'lucide
 import { Button } from '../../../components/Button';
 import { parseEventFromText } from '../services/geminiService';
 import { AIParsedEvent, CalendarEvent, TeamMember } from '../types';
-import { TEAM_MEMBERS } from '../constants';
 import { parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,9 +10,10 @@ interface AIAssistantProps {
   onAddEvent: (event: CalendarEvent) => void;
   isOpen: boolean;
   onClose: () => void;
+  teamMembers: TeamMember[];
 }
 
-export const AIAssistant: React.FC<AIAssistantProps> = ({ onAddEvent, isOpen, onClose }) => {
+export const AIAssistant: React.FC<AIAssistantProps> = ({ onAddEvent, isOpen, onClose, teamMembers }) => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedResult, setParsedResult] = useState<AIParsedEvent | null>(null);
@@ -25,7 +25,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ onAddEvent, isOpen, on
     setIsProcessing(true);
     setParsedResult(null);
 
-    const result = await parseEventFromText(input, new Date());
+    const result = await parseEventFromText(input, new Date(), teamMembers.map(m => m.name));
 
     setIsProcessing(false);
     if (result) {
@@ -38,7 +38,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ onAddEvent, isOpen, on
   const handleConfirm = () => {
     if (!parsedResult) return;
 
-    const assignee = TEAM_MEMBERS.find(m =>
+    const assignee = teamMembers.find(m =>
       m.name.toLowerCase().includes(parsedResult.assigneeName.toLowerCase()) ||
       parsedResult.assigneeName.toLowerCase().includes(m.name.split(' ')[0].toLowerCase())
     );
@@ -49,7 +49,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ onAddEvent, isOpen, on
       description: parsedResult.description || '',
       start: parseISO(parsedResult.startDate),
       end: parseISO(parsedResult.endDate),
-      memberId: assignee ? assignee.id : TEAM_MEMBERS[0].id,
+      memberId: assignee ? assignee.id : teamMembers[0]?.id ?? '',
       type: (parsedResult.type as any) || 'other'
     };
 

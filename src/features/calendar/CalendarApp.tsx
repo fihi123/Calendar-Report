@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   format,
   startOfMonth,
@@ -20,17 +20,39 @@ import {
   BrainCircuit,
   Calendar as CalendarIcon,
   Factory,
-  Package
+  Package,
+  Settings
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/Button';
 import { AIAssistant } from './components/AIAssistant';
+import { TeamManagerModal } from './components/TeamManagerModal';
 import { TEAM_MEMBERS, INITIAL_EVENTS } from './constants';
-import { CalendarEvent, EventType } from './types';
+import { CalendarEvent, EventType, TeamMember } from './types';
 import { generateWeeklySummary } from './services/geminiService';
 
+const STORAGE_KEY = 'teamsync-team-members';
+
+const loadTeamMembers = (): TeamMember[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* ignore corrupt data */ }
+  return TEAM_MEMBERS;
+};
+
 const CalendarApp: React.FC = () => {
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(loadTeamMembers);
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(teamMembers));
+  }, [teamMembers]);
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
   const [isAIAddOpen, setIsAIAddOpen] = useState(false);
@@ -39,7 +61,7 @@ const CalendarApp: React.FC = () => {
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
 
   const [newEventTitle, setNewEventTitle] = useState('');
-  const [newEventMember, setNewEventMember] = useState(TEAM_MEMBERS[0].id);
+  const [newEventMember, setNewEventMember] = useState(teamMembers[0]?.id ?? '');
   const [newEventType, setNewEventType] = useState<EventType>('manufacturing');
   const [newEventStart, setNewEventStart] = useState('');
   const [newEventEnd, setNewEventEnd] = useState('');
@@ -106,7 +128,7 @@ const CalendarApp: React.FC = () => {
     setIsGeneratingSummary(false);
   };
 
-  const getMemberById = (id: string) => TEAM_MEMBERS.find(m => m.id === id);
+  const getMemberById = (id: string) => teamMembers.find(m => m.id === id);
 
   const getTypeBadge = (type: EventType) => {
     if (type === 'manufacturing') {
@@ -149,7 +171,7 @@ const CalendarApp: React.FC = () => {
             >
               All
             </button>
-            {TEAM_MEMBERS.map(member => (
+            {teamMembers.map(member => (
               <button
                 key={member.id}
                 onClick={() => setSelectedMemberFilter(member.id)}
@@ -160,6 +182,13 @@ const CalendarApp: React.FC = () => {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setIsTeamModalOpen(true)}
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            title="Manage Team"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
 
           <Button variant="secondary" onClick={handleGenerateSummary} disabled={isGeneratingSummary}>
             <BrainCircuit className="w-4 h-4 mr-2 text-purple-600" />
@@ -368,7 +397,7 @@ const CalendarApp: React.FC = () => {
             <div>
                 <label className="block text-sm font-medium text-slate-700">Assign To</label>
                 <div className="mt-1 grid grid-cols-2 gap-2">
-                    {TEAM_MEMBERS.map(member => (
+                    {teamMembers.map(member => (
                         <div
                             key={member.id}
                             onClick={() => setNewEventMember(member.id)}
@@ -392,6 +421,14 @@ const CalendarApp: React.FC = () => {
         isOpen={isAIAddOpen}
         onClose={() => setIsAIAddOpen(false)}
         onAddEvent={addEvent}
+        teamMembers={teamMembers}
+      />
+
+      <TeamManagerModal
+        isOpen={isTeamModalOpen}
+        onClose={() => setIsTeamModalOpen(false)}
+        teamMembers={teamMembers}
+        onUpdateMembers={setTeamMembers}
       />
     </div>
   );

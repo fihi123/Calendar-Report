@@ -4,7 +4,7 @@ import { AIParsedEvent } from "../types";
 const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
-export const parseEventFromText = async (text: string, currentDate: Date): Promise<AIParsedEvent | null> => {
+export const parseEventFromText = async (text: string, currentDate: Date, memberNames: string[] = []): Promise<AIParsedEvent | null> => {
   if (!apiKey) {
     console.error("API Key is missing");
     return null;
@@ -21,7 +21,7 @@ export const parseEventFromText = async (text: string, currentDate: Date): Promi
     - 'meeting': For discussions or meetings.
     - 'other': For anything else.
 
-    If the user mentions a name like "Sarah" or "Mike", try to fuzzy match it to one of these members: Sarah Kim, Mike Chen, Jessica Lee, David Park.
+    If the user mentions a name, try to fuzzy match it to one of these members: ${memberNames.length > 0 ? memberNames.join(', ') : 'No members configured'}.
     If no specific time is given, assume a full day event or a reasonable shift (e.g. 8am - 5pm).
 
     Return JSON.

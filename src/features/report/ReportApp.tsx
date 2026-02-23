@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import ReportPreview from './components/ReportPreview';
 import EditorPanel from './components/EditorPanel';
 import { ReportData, ReportType } from './types';
-import { Printer, Save, FileUp, Menu, X, FileDown, Table } from 'lucide-react';
+import { Printer, Save, FileUp, Menu, X, FileDown, Table, RotateCcw } from 'lucide-react';
 import { exportToPdf, exportToExcel } from './utils/exportUtils';
 
 interface CalendarLinkState {
@@ -120,6 +120,15 @@ const ReportApp: React.FC = () => {
     }
   }, [reportData]);
 
+  const handleReset = useCallback(() => {
+    if (confirm('보고서를 초기화하시겠습니까? 현재 작성된 내용이 모두 삭제됩니다.')) {
+      setReportData({
+        ...initialData,
+        date: new Date().toISOString().split('T')[0],
+      });
+    }
+  }, []);
+
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -203,6 +212,11 @@ const ReportApp: React.FC = () => {
           <button onClick={handleSave} className="flex items-center gap-1.5 text-gray-500 hover:text-brand-700 hover:bg-gray-100 px-2.5 py-1.5 rounded-md transition-all text-xs" title="Save JSON (Ctrl+S)">
             <Save size={14} />
             <span className="hidden sm:inline font-medium">Save</span>
+          </button>
+          <div className="h-5 w-px bg-gray-200 mx-0.5"></div>
+          <button onClick={handleReset} className="flex items-center gap-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium" title="초기화">
+            <RotateCcw size={14} />
+            <span className="hidden sm:inline">초기화</span>
           </button>
           <div className="h-5 w-px bg-gray-200 mx-0.5"></div>
           <button onClick={() => setShowEditor(!showEditor)} className="flex items-center gap-1.5 text-gray-500 hover:text-brand-700 hover:bg-gray-100 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium" title="Toggle Editor (Ctrl+E)">

@@ -83,7 +83,15 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
   };
 
   const handleSave = () => {
-    onUpdateMembers(localMembers);
+    let membersToSave = localMembers;
+    if (editingId && editName.trim()) {
+      membersToSave = localMembers.map(m =>
+        m.id === editingId
+          ? { ...m, name: editName.trim(), role: editRole.trim(), color: editColor }
+          : m
+      );
+    }
+    onUpdateMembers(membersToSave);
     onClose();
   };
 

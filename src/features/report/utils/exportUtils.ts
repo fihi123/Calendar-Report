@@ -7,8 +7,11 @@ export const exportToPdf = async (filename?: string) => {
   if (pages.length === 0) return;
 
   const wrapper = document.createElement('div');
-  pages.forEach((page) => {
+  pages.forEach((page, index) => {
     const clone = page.cloneNode(true) as HTMLElement;
+    if (index > 0) {
+      clone.classList.add('pdf-page-break');
+    }
     wrapper.appendChild(clone);
   });
 
@@ -29,7 +32,7 @@ export const exportToPdf = async (filename?: string) => {
     },
     pagebreak: {
       mode: ['css', 'legacy'],
-      before: '.a4-screen',
+      before: '.pdf-page-break',
     },
   };
 

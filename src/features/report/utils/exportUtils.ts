@@ -2,7 +2,56 @@ import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 import { ReportData, getYieldMode, isMultiLot } from '../types';
 
-export const exportToPdf = async (filename?: string) => {
+export interface PdfHeaderInfo {
+  title: string;
+  department: string;
+  date: string;
+}
+
+const HEADER_HEIGHT_MM = 18;
+
+const renderHeaderImage = async (info: PdfHeaderInfo): Promise<string> => {
+  const { default: html2canvas } = await import('html2canvas');
+
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:170mm;padding:0;background:white;';
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1f2937;padding-bottom:6px;';
+
+  const leftDiv = document.createElement('div');
+  const h2 = document.createElement('h2');
+  h2.textContent = `${info.title} - 상세 보고서`;
+  h2.style.cssText = 'font-size:14px;font-weight:bold;color:#111827;margin:0;';
+  const sub = document.createElement('p');
+  sub.textContent = 'Detailed Inspection Report';
+  sub.style.cssText = 'font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:2px 0 0;';
+  leftDiv.appendChild(h2);
+  leftDiv.appendChild(sub);
+
+  const rightDiv = document.createElement('div');
+  rightDiv.style.cssText = 'text-align:right;';
+  const deptSpan = document.createElement('div');
+  deptSpan.textContent = info.department;
+  deptSpan.style.cssText = 'font-size:10px;font-weight:bold;color:#4b5563;';
+  const dateSpan = document.createElement('div');
+  dateSpan.textContent = info.date;
+  dateSpan.style.cssText = 'font-size:8px;color:#9ca3af;';
+  rightDiv.appendChild(deptSpan);
+  rightDiv.appendChild(dateSpan);
+
+  wrapper.appendChild(leftDiv);
+  wrapper.appendChild(rightDiv);
+  container.appendChild(wrapper);
+  document.body.appendChild(container);
+
+  const canvas = await html2canvas(container, { scale: 3, backgroundColor: '#ffffff', logging: false });
+  document.body.removeChild(container);
+
+  return canvas.toDataURL('image/png');
+};
+
+export const exportToPdf = async (filename?: string, headerInfo?: PdfHeaderInfo) => {
   const pages = document.querySelectorAll('.a4-screen');
   if (pages.length === 0) return;
 
@@ -15,10 +64,12 @@ export const exportToPdf = async (filename?: string) => {
     wrapper.appendChild(clone);
   });
 
+  const topMargin = headerInfo ? HEADER_HEIGHT_MM : 0;
+
   const opt = {
-    margin: 0,
+    margin: [topMargin, 0, 0, 0] as [number, number, number, number],
     filename: filename || `report_${new Date().toISOString().split('T')[0]}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
+    image: { type: 'jpeg' as const, quality: 0.98 },
     html2canvas: {
       scale: 2,
       useCORS: true,
@@ -36,7 +87,27 @@ export const exportToPdf = async (filename?: string) => {
     },
   };
 
-  await html2pdf().set(opt).from(wrapper).save();
+  if (!headerInfo) {
+    await html2pdf().set(opt).from(wrapper).save();
+    return;
+  }
+
+  const headerDataUrl = await renderHeaderImage(headerInfo);
+
+  const worker = html2pdf().set(opt).from(wrapper);
+  const pdf = await worker.toPdf().get('pdf');
+
+  const totalPages = pdf.internal.getNumberOfPages();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const headerImgWidth = pageWidth - 40;
+  const headerImgHeight = HEADER_HEIGHT_MM - 4;
+
+  for (let i = 2; i <= totalPages; i++) {
+    pdf.setPage(i);
+    pdf.addImage(headerDataUrl, 'PNG', 20, 3, headerImgWidth, headerImgHeight);
+  }
+
+  pdf.save(opt.filename);
 };
 
 export const exportToExcel = (data: ReportData) => {
@@ -56,9 +127,11 @@ export const exportToExcel = (data: ReportData) => {
     infoRows.push([item.label, item.value]);
   });
   infoRows.push([]);
-  infoRows.push(['결재 - 담당', data.approvals.drafter]);
-  infoRows.push(['결재 - 검토', data.approvals.reviewer]);
-  infoRows.push(['결재 - 승인', data.approvals.approver]);
+  (['drafter', 'reviewer', 'approver'] as const).forEach(role => {
+    const label = role === 'drafter' ? '담당' : role === 'reviewer' ? '검토' : '승인';
+    const entry = data.approvals[role];
+    infoRows.push([`결재 - ${label}`, `${entry.department} ${entry.position} ${entry.name} (${entry.date || ''})`]);
+  });
   infoRows.push([]);
   infoRows.push(['종합 의견', data.summary]);
   infoRows.push(['이슈 사항', data.issues]);

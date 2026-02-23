@@ -45,6 +45,14 @@ export interface LotData {
   yield: YieldData;
 }
 
+export interface ApprovalEntry {
+  department: string;
+  position: string;
+  name: string;
+  date: string;
+  signature?: string;
+}
+
 export interface ReportData {
   reportType: ReportType;
   title: string;
@@ -54,9 +62,9 @@ export interface ReportData {
   decision?: string;
   lots: LotData[];
   approvals: {
-    drafter: string;
-    reviewer: string;
-    approver: string;
+    drafter: ApprovalEntry;
+    reviewer: ApprovalEntry;
+    approver: ApprovalEntry;
   };
   issues: string;
   conclusion: string;

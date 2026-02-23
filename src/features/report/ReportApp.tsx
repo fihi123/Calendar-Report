@@ -21,6 +21,7 @@ const initialData: ReportData = {
     { id: '2', label: '작성자', value: '김철수 책임' },
     { id: '3', label: 'LOT No.', value: '2025-BATCH-001' },
     { id: '4', label: '제품명', value: '하이드라 세럼' },
+    { id: '5', label: '문서 ID', value: 'SRS-000001' },
   ],
   summary: '금일 시생산 결과 전반적인 물성 양호하며 목표 수율 달성함.',
   decision: '적합',
@@ -48,9 +49,9 @@ const initialData: ReportData = {
     },
   ],
   approvals: {
-    drafter: '김철수',
-    reviewer: '이영희',
-    approver: '박부장',
+    drafter: { department: '품질보증팀', position: '책임', name: '김철수', date: new Date().toISOString().split('T')[0] },
+    reviewer: { department: '품질보증팀', position: '수석', name: '이영희', date: '' },
+    approver: { department: '품질보증팀', position: '팀장', name: '박부장', date: '' },
   },
   issues: '- 포장 라인 초기 세팅 시간 지연 (15분)\n- 2호기 노즐 압력 미세 조정 완료',
   conclusion: '',
@@ -102,14 +103,20 @@ const ReportApp: React.FC = () => {
   const handleExportPdf = useCallback(async () => {
     setIsExporting(true);
     try {
-      await exportToPdf(`report_${reportData.date}.pdf`);
+      const department = reportData.info.find(i => i.label.includes('부서'))?.value || '';
+      const dateStr = new Date(reportData.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+      await exportToPdf(`report_${reportData.date}.pdf`, {
+        title: reportData.title,
+        department,
+        date: dateStr,
+      });
     } catch (err) {
       console.error('PDF export failed:', err);
       alert('PDF 내보내기에 실패했습니다.');
     } finally {
       setIsExporting(false);
     }
-  }, [reportData.date]);
+  }, [reportData]);
 
   const handleExportExcel = useCallback(() => {
     try {
@@ -164,6 +171,11 @@ const ReportApp: React.FC = () => {
             }];
             delete json.metrics;
             delete json.yield;
+          }
+          if (json.approvals && typeof json.approvals.drafter === 'string') {
+            (['drafter', 'reviewer', 'approver'] as const).forEach(role => {
+              json.approvals[role] = { department: '', position: '', name: json.approvals[role] || '', date: '' };
+            });
           }
           if (!json.reportType) {
             json.reportType = 'single-manufacturing';

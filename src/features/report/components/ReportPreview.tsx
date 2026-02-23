@@ -109,7 +109,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'] 
 
       {lot.metrics.length > 0 && <ChartComponent data={lot.metrics.map(m => ({ ...m, target: (m.min + m.max) / 2 }))} />}
 
-      <div className="border border-black p-4 mb-4 bg-gray-50 shadow-sm">
+      <div className="border border-black p-4 mb-4 mt-6 bg-gray-50 shadow-sm">
         {yieldMode === 'packaging' ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between px-2 text-center">
@@ -224,13 +224,10 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
   return (
     <div className="flex flex-col gap-8 print:gap-0 text-gray-900">
       {/* COVER PAGE */}
-      <div className="a4-screen flex flex-col justify-between border-t-8 border-brand-900 selection:bg-yellow-200">
+      <div className="a4-screen cover-page flex flex-col justify-between border-t-8 border-brand-900 selection:bg-yellow-200">
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="w-full text-center space-y-8">
-             <div className="inline-block border-b-2 border-gray-400 pb-2 mb-10">
-               <span className="text-sm tracking-[0.3em] font-medium text-gray-500 uppercase">Internal Report</span>
-             </div>
-             <h1 className="text-5xl font-extrabold font-serif leading-tight text-gray-900 break-keep px-10">
+             <h1 className="text-5xl font-extrabold font-serif leading-tight text-gray-900 break-keep px-10 mt-10">
                {data.title || '품질 / 생산 보고서'}
              </h1>
              <div className="text-sm text-gray-500 mt-2">
@@ -253,10 +250,6 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                       <th className="py-2 text-sm font-bold text-gray-500 w-24 align-top">작성일</th>
                       <td className="py-2 text-lg font-medium">{currentDate}</td>
                     </tr>
-                    <tr>
-                      <th className="py-2 text-sm font-bold text-gray-500 w-24 align-top">문서 ID</th>
-                      <td className="py-2 text-sm font-mono text-gray-400">SRS-{Date.now().toString().slice(-6)}</td>
-                    </tr>
                   </tbody>
                 </table>
              </div>
@@ -276,48 +269,43 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
               </tr>
             </thead>
             <tbody>
-              <tr className="h-40">
-                <td className="border border-black text-center align-middle relative">
-                   {data.approvals.drafter && (
-                     <div className="flex flex-col items-center justify-center gap-2">
-                        <span className="font-serif text-2xl text-gray-800 z-10 relative">{data.approvals.drafter}</span>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-                          <div className="w-24 h-24 rounded-full border-4 border-red-600 flex items-center justify-center rotate-[-12deg]">
-                            <span className="text-red-600 font-bold text-xs">SIGNED</span>
-                          </div>
-                        </div>
-                     </div>
-                   )}
-                </td>
-                <td className="border border-black text-center align-middle relative">
-                  {data.approvals.reviewer && (
-                     <div className="flex flex-col items-center justify-center gap-2">
-                        <span className="font-serif text-2xl text-gray-800 z-10 relative">{data.approvals.reviewer}</span>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-                          <div className="w-24 h-24 rounded-full border-4 border-red-600 flex items-center justify-center rotate-[-12deg]">
-                            <span className="text-red-600 font-bold text-xs">REVIEWED</span>
-                          </div>
-                        </div>
-                     </div>
-                   )}
-                </td>
-                <td className="border border-black text-center align-middle relative">
-                  {data.approvals.approver && (
-                     <div className="flex flex-col items-center justify-center gap-2">
-                        <span className="font-serif text-2xl text-gray-800 z-10 relative">{data.approvals.approver}</span>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-                          <div className="w-24 h-24 rounded-full border-4 border-red-600 flex items-center justify-center rotate-[-12deg]">
-                            <span className="text-red-600 font-bold text-xs">APPROVED</span>
-                          </div>
-                        </div>
-                     </div>
-                   )}
-                </td>
+              <tr>
+                {(['drafter', 'reviewer', 'approver'] as const).map(role => (
+                  <td key={role} className="border border-black bg-gray-50 text-center align-middle py-1 text-[10px] text-gray-500 font-medium">
+                    {data.approvals[role].department}
+                  </td>
+                ))}
               </tr>
               <tr>
-                <td className="border border-black bg-gray-50 text-center py-1 text-[10px] text-gray-500">Date: {currentDate}</td>
-                <td className="border border-black bg-gray-50 text-center py-1 text-[10px] text-gray-500">Date:</td>
-                <td className="border border-black bg-gray-50 text-center py-1 text-[10px] text-gray-500">Date:</td>
+                {(['drafter', 'reviewer', 'approver'] as const).map(role => (
+                  <td key={role} className="border border-black bg-gray-50 text-center align-middle py-1 text-[10px] text-gray-500">
+                    {data.approvals[role].position}
+                  </td>
+                ))}
+              </tr>
+              <tr className="h-16">
+                {(['drafter', 'reviewer', 'approver'] as const).map(role => {
+                  const entry = data.approvals[role];
+                  return (
+                    <td key={role} className="border border-black text-center align-middle relative px-2">
+                      {(entry.name || entry.signature) && (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="font-serif text-lg text-gray-800">{entry.name}</span>
+                          {entry.signature && (
+                            <img src={entry.signature} alt="서명" className="h-10 object-contain" />
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr>
+                {(['drafter', 'reviewer', 'approver'] as const).map(role => (
+                  <td key={role} className="border border-black bg-gray-50 text-center align-middle py-1 text-[10px] text-gray-500">
+                    {data.approvals[role].date || ''}
+                  </td>
+                ))}
               </tr>
             </tbody>
           </table>
@@ -325,111 +313,128 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* DETAIL PAGE */}
-      <div className="a4-screen flex flex-col relative selection:bg-yellow-200">
-        <header className="flex justify-between items-end border-b-2 border-gray-800 pb-2 mb-8">
-          <div>
-             <h2 className="text-xl font-bold font-serif text-gray-900">{data.title} - 상세 보고서</h2>
-             <p className="text-[10px] text-gray-500 uppercase tracking-wide">Detailed Inspection Report</p>
-          </div>
-          <div className="text-right">
-             <div className="text-xs font-bold text-gray-600">{displayDept}</div>
-             <div className="text-[10px] text-gray-400">{currentDate}</div>
-          </div>
-        </header>
-
-        <section className="mb-8 print-break-inside-avoid">
-          <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">1. 개요 (Overview)</h2>
-          <table className="report-table">
-            <colgroup><col className="w-[15%]" /><col className="w-[35%]" /><col className="w-[15%]" /><col className="w-[35%]" /></colgroup>
-            <tbody>
-              {Array.from({ length: Math.ceil(data.info.length / 2) }).map((_, rowIndex) => {
-                 const item1 = data.info[rowIndex * 2];
-                 const item2 = data.info[rowIndex * 2 + 1];
-                 return (
-                   <tr key={rowIndex}>
-                     <th>{item1.label}</th><td>{item1.value}</td>
-                     <th>{item2 ? item2.label : ''}</th><td>{item2 ? item2.value : ''}</td>
-                   </tr>
-                 );
-               })}
-            </tbody>
-          </table>
-        </section>
-
-        <section className="mb-8 print-break-inside-avoid">
-          <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">2. 품질 검사 및 생산 지표 (Inspection Data)</h2>
-          {isMultiLot(data.reportType) ? (
-            <>
-              {data.lots.map((lot, idx) => (
-                <div key={lot.id} className="mb-6">
-                  <div className="bg-gray-800 text-white text-xs font-bold px-3 py-1.5 mb-3 flex items-center gap-2">
-                    <span>■ {lot.name || `Lot ${idx + 1}`}</span>
+      <div className="a4-screen relative selection:bg-yellow-200">
+        <table className="detail-table w-full">
+          <thead>
+            <tr>
+              <td>
+                <div className="flex justify-between items-end border-b-2 border-gray-800 pb-2 mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold font-serif text-gray-900">{data.title} - 상세 보고서</h2>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Detailed Inspection Report</p>
                   </div>
-                  <LotSection lot={lot} reportType={data.reportType} />
-                </div>
-              ))}
-              <div className="border-2 border-gray-800 p-3 bg-gray-50 mt-4">
-                <div className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-brand-600 rounded-full"></span> 통합 수율 (Aggregate Yield)
-                </div>
-                <div className="text-2xl font-bold text-blue-900 text-center">
-                  {calculateAggregate(data.lots, data.reportType)}%
-                </div>
-              </div>
-            </>
-          ) : (
-            <LotSection lot={data.lots[0]} reportType={data.reportType} />
-          )}
-        </section>
-
-        <section className="mb-8 print-break-inside-avoid">
-          <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">3. 종합 의견 (Summary)</h2>
-          <div className="grid grid-cols-1 gap-0 border border-black divide-y divide-black">
-            <div className="p-3 bg-white min-h-[80px]">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-gray-900 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-gray-900 rounded-full"></span> 종합 요약 (Executive Summary)
-                </h3>
-                {getDecisionBadge(data.decision)}
-              </div>
-              <p className="whitespace-pre-wrap leading-relaxed text-xs text-gray-700 pl-3.5">{data.summary || '내용 없음'}</p>
-            </div>
-            <div className="p-3 bg-white min-h-[80px]">
-              <h3 className="text-xs font-bold text-red-700 mb-2 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-red-700 rounded-full"></span> 이슈 및 특이사항 (Issues)
-              </h3>
-              <p className="whitespace-pre-wrap leading-relaxed text-xs text-gray-700 pl-3.5">{data.issues || '특이사항 없음'}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-8 print-break-inside-avoid flex-grow">
-          <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">4. 현장 사진 (Site Photos)</h2>
-          {data.images.length === 0 ? (
-            <div className="border border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center text-gray-400 bg-gray-50">
-              <span className="text-xs">첨부된 사진이 없습니다.</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {data.images.map((img, i) => (
-                <div key={i} className="border border-black bg-white p-2 relative shadow-sm break-inside-avoid">
-                  <div className="h-48 flex items-center justify-center overflow-hidden bg-gray-100 border border-gray-200">
-                     <img src={img} alt={`현장 사진 ${i+1}`} className="max-w-full max-h-full object-contain" crossOrigin="anonymous" />
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-gray-600 uppercase">Figure {i+1}</span>
-                    <span className="text-[10px] text-gray-400">Site Photo</span>
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-gray-600">{displayDept}</div>
+                    <div className="text-[10px] text-gray-400">{currentDate}</div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              </td>
+            </tr>
+          </thead>
+          <tfoot>
+            <tr>
+              <td>
+                <div className="pt-4 border-t-2 border-gray-200 text-center mt-6">
+                  <p className="text-[9px] text-gray-400 uppercase tracking-widest">Confidential Document | Unauthorized reproduction prohibited</p>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
+          <tbody>
+            <tr>
+              <td>
+                <section className="mb-8 print-break-inside-avoid">
+                  <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">1. 개요 (Overview)</h2>
+                  <table className="report-table">
+                    <colgroup><col className="w-[15%]" /><col className="w-[35%]" /><col className="w-[15%]" /><col className="w-[35%]" /></colgroup>
+                    <tbody>
+                      {Array.from({ length: Math.ceil(data.info.length / 2) }).map((_, rowIndex) => {
+                         const item1 = data.info[rowIndex * 2];
+                         const item2 = data.info[rowIndex * 2 + 1];
+                         return (
+                           <tr key={rowIndex}>
+                             <th>{item1.label}</th><td>{item1.value}</td>
+                             <th>{item2 ? item2.label : ''}</th><td>{item2 ? item2.value : ''}</td>
+                           </tr>
+                         );
+                       })}
+                    </tbody>
+                  </table>
+                </section>
 
-        <footer className="mt-auto pt-6 border-t-2 border-gray-200 text-center">
-          <p className="text-[9px] text-gray-400 uppercase tracking-widest">Confidential Document | Unauthorized reproduction prohibited</p>
-          <p className="text-[9px] text-gray-300 mt-1 font-mono">System Generated ID: {Date.now().toString().slice(-8)}</p>
-        </footer>
+                <section className="mb-8 print-break-inside-avoid">
+                  <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">2. 품질 검사 및 생산 지표 (Inspection Data)</h2>
+                  {isMultiLot(data.reportType) ? (
+                    <>
+                      {data.lots.map((lot, idx) => (
+                        <div key={lot.id} className="mb-6">
+                          <div className="bg-gray-800 text-white text-xs font-bold px-3 py-1.5 mb-3 flex items-center gap-2">
+                            <span>■ {lot.name || `Lot ${idx + 1}`}</span>
+                          </div>
+                          <LotSection lot={lot} reportType={data.reportType} />
+                        </div>
+                      ))}
+                      <div className="border-2 border-gray-800 p-3 bg-gray-50 mt-4">
+                        <div className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                          <span className="w-2 h-2 bg-brand-600 rounded-full"></span> 통합 수율 (Aggregate Yield)
+                        </div>
+                        <div className="text-2xl font-bold text-blue-900 text-center">
+                          {calculateAggregate(data.lots, data.reportType)}%
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <LotSection lot={data.lots[0]} reportType={data.reportType} />
+                  )}
+                </section>
+
+                <section className="mb-8 print-break-inside-avoid">
+                  <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">3. 종합 의견 (Summary)</h2>
+                  <div className="grid grid-cols-1 gap-0 border border-black divide-y divide-black">
+                    <div className="p-3 bg-white min-h-[80px]">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-bold text-gray-900 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-gray-900 rounded-full"></span> 종합 요약 (Executive Summary)
+                        </h3>
+                        {getDecisionBadge(data.decision)}
+                      </div>
+                      <p className="whitespace-pre-wrap leading-relaxed text-xs text-gray-700 pl-3.5">{data.summary || '내용 없음'}</p>
+                    </div>
+                    <div className="p-3 bg-white min-h-[80px]">
+                      <h3 className="text-xs font-bold text-red-700 mb-2 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-red-700 rounded-full"></span> 이슈 및 특이사항 (Issues)
+                      </h3>
+                      <p className="whitespace-pre-wrap leading-relaxed text-xs text-gray-700 pl-3.5">{data.issues || '특이사항 없음'}</p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="mb-8 print-break-inside-avoid">
+                  <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">4. 현장 사진 (Site Photos)</h2>
+                  {data.images.length === 0 ? (
+                    <div className="border border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center text-gray-400 bg-gray-50">
+                      <span className="text-xs">첨부된 사진이 없습니다.</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      {data.images.map((img, i) => (
+                        <div key={i} className="border border-black bg-white p-2 relative shadow-sm break-inside-avoid">
+                          <div className="h-48 flex items-center justify-center overflow-hidden bg-gray-100 border border-gray-200">
+                             <img src={img} alt={`현장 사진 ${i+1}`} className="max-w-full max-h-full object-contain" crossOrigin="anonymous" />
+                          </div>
+                          <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-gray-600 uppercase">Figure {i+1}</span>
+                            <span className="text-[10px] text-gray-400">Site Photo</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );

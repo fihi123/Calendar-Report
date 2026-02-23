@@ -3,6 +3,7 @@ import { ReportData, ProductionMetric, ReportType, LotData, isMultiLot, getYield
 import { Sparkles, Plus, Trash2, BarChart2, FileSpreadsheet, Upload, ChevronRight, Download, ChevronDown, Package, Factory, Calculator, AlertCircle, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import { analyzeData } from '../services/geminiService';
 import { parseExcelMetrics, parseExcelToLots, downloadTemplate, downloadFullTemplate } from '../utils/excelParser';
+import SignaturePad from './SignaturePad';
 
 interface Props {
   data: ReportData;
@@ -277,11 +278,25 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <label className="text-xs font-semibold text-gray-500 mb-2 block">결재 라인</label>
-            <div className="grid grid-cols-3 gap-2">
-               {['drafter', 'reviewer', 'approver'].map((role) => (
-                 <div key={role}><input type="text" placeholder={role === 'drafter' ? '담당' : role === 'reviewer' ? '검토' : '승인'} value={data.approvals[role as keyof typeof data.approvals]} onChange={(e) => handleDeepChange('approvals', role, e.target.value)} className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none" /></div>
-               ))}
+            <label className="text-xs font-semibold text-gray-500 mb-3 block">결재 라인</label>
+            <div className="grid grid-cols-3 gap-3">
+               {(['drafter', 'reviewer', 'approver'] as const).map((role) => {
+                 const label = role === 'drafter' ? '담당' : role === 'reviewer' ? '검토' : '승인';
+                 const entry = data.approvals[role];
+                 const updateField = (field: string, value: string) => {
+                   onChange({ ...data, approvals: { ...data.approvals, [role]: { ...entry, [field]: value } } });
+                 };
+                 return (
+                   <div key={role} className="space-y-1.5 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                     <div className="text-[10px] font-bold text-gray-400 uppercase text-center">{label}</div>
+                     <input type="text" placeholder="부서" value={entry.department} onChange={(e) => updateField('department', e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none" />
+                     <input type="text" placeholder="직급" value={entry.position} onChange={(e) => updateField('position', e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none" />
+                     <input type="text" placeholder="이름" value={entry.name} onChange={(e) => updateField('name', e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none font-medium" />
+                     <SignaturePad value={entry.signature || ''} onChange={(v) => updateField('signature', v)} />
+                     <input type="date" value={entry.date} onChange={(e) => updateField('date', e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none text-gray-500" />
+                   </div>
+                 );
+               })}
             </div>
           </div>
         </section>

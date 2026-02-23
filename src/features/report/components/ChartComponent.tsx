@@ -85,7 +85,7 @@ const ChartComponent: React.FC<Props> = ({ data }) => {
         </div>
       </div>
 
-      <div className="h-64">
+      <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
           {viewMode === 'normalized' ? (
             <BarChart data={normalizedData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }} barGap={2}>

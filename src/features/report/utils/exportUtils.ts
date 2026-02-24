@@ -51,63 +51,214 @@ const renderHeaderImage = async (info: PdfHeaderInfo): Promise<string> => {
   return canvas.toDataURL('image/png');
 };
 
-export const exportToPdf = async (filename?: string, headerInfo?: PdfHeaderInfo) => {
-  const pages = document.querySelectorAll('.a4-screen');
-  if (pages.length === 0) return;
+/**
+ * Wrap all table-cell content in flex containers so html2canvas
+ * reliably renders vertical + horizontal centering.
+ * Skips cells whose closest <table> is .detail-table (layout wrapper).
+ * Must be called AFTER the container is appended to the DOM
+ * (getComputedStyle needs a live element).
+ */
+const fixCellAlignment = (root: HTMLElement) => {
+  root.querySelectorAll('th, td').forEach(el => {
+    const cell = el as HTMLElement;
+    // Skip the detail-table layout wrapper cells (they hold entire sections)
+    const parentTable = cell.closest('table');
+    if (parentTable?.classList.contains('detail-table')) return;
 
-  const wrapper = document.createElement('div');
-  pages.forEach((page, index) => {
-    const clone = page.cloneNode(true) as HTMLElement;
-    if (index > 0) {
-      clone.classList.add('pdf-page-break');
+    const computed = window.getComputedStyle(cell);
+    const hAlign = computed.textAlign;
+
+    cell.style.verticalAlign = 'middle';
+    cell.style.textAlign = hAlign;
+
+    // Wrap cell children in a flex container for reliable centering
+    const inner = document.createElement('div');
+    const justify = hAlign === 'center' ? 'center'
+      : (hAlign === 'right' || hAlign === 'end') ? 'flex-end'
+      : 'flex-start';
+    inner.style.cssText = `display:flex;align-items:center;justify-content:${justify};width:100%;`;
+    while (cell.firstChild) {
+      inner.appendChild(cell.firstChild);
     }
-    wrapper.appendChild(clone);
+    cell.appendChild(inner);
+  });
+};
+
+export const exportToPdf = async (filename?: string, headerInfo?: PdfHeaderInfo) => {
+  const allPages = document.querySelectorAll('.a4-screen');
+  if (allPages.length === 0) return;
+
+  const { default: html2canvas } = await import('html2canvas');
+  const pdfFilename = filename || `report_${new Date().toISOString().split('T')[0]}.pdf`;
+
+  // ─── 1. Render cover page separately via html2pdf → obtain jsPDF instance ───
+  const coverClone = allPages[0].cloneNode(true) as HTMLElement;
+  Object.assign(coverClone.style, {
+    width: '170mm',
+    minHeight: 'auto',
+    height: '257mm',      // 297 − 20*2 (page margins)
+    maxHeight: '257mm',
+    overflow: 'hidden',
+    padding: '10mm 0',
+    margin: '0',
+    background: 'white',
+    boxShadow: 'none',
   });
 
-  const topMargin = headerInfo ? HEADER_HEIGHT_MM : 0;
+  const coverOff = document.createElement('div');
+  coverOff.style.cssText = 'position:fixed;left:-9999px;top:0;width:170mm;background:white;';
+  coverOff.appendChild(coverClone);
+  document.body.appendChild(coverOff);
+  fixCellAlignment(coverOff);
 
-  const opt = {
-    margin: [topMargin, 0, 0, 0] as [number, number, number, number],
-    filename: filename || `report_${new Date().toISOString().split('T')[0]}.pdf`,
-    image: { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdf: any = await html2pdf()
+    .set({
+      margin: [20, 20, 20, 20] as [number, number, number, number],
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, letterRendering: true },
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+    })
+    .from(coverClone)
+    .toPdf()
+    .get('pdf');
+
+  document.body.removeChild(coverOff);
+
+  // Ensure cover is exactly 1 page (prevent spill-over from creating blank page)
+  while (pdf.internal.getNumberOfPages() > 1) {
+    pdf.deletePage(pdf.internal.getNumberOfPages());
+  }
+
+  // ─── 2. Render detail pages to canvas, then slice into PDF pages ───
+  if (allPages.length > 1) {
+    const detailWrapper = document.createElement('div');
+    detailWrapper.style.cssText = 'width:170mm;background:white;';
+
+    for (let i = 1; i < allPages.length; i++) {
+      const clone = allPages[i].cloneNode(true) as HTMLElement;
+      Object.assign(clone.style, {
+        width: '100%',
+        minHeight: 'auto',
+        padding: '0',
+        margin: '0',
+        background: 'white',
+        boxShadow: 'none',
+      });
+      // Hide print-only hidden elements (e.g. chart view toggle)
+      clone.querySelectorAll('.print\\:hidden').forEach(el =>
+        ((el as HTMLElement).style.display = 'none')
+      );
+      detailWrapper.appendChild(clone);
+    }
+
+    const detailOff = document.createElement('div');
+    detailOff.style.cssText = 'position:fixed;left:-9999px;top:0;width:170mm;background:white;';
+    detailOff.appendChild(detailWrapper);
+    document.body.appendChild(detailOff);
+    fixCellAlignment(detailOff);
+
+    // Collect avoid-break zones (elements that should not be split across pages)
+    const avoidEls = detailWrapper.querySelectorAll(
+      '.print-break-inside-avoid, .report-table, .recharts-wrapper'
+    );
+    const wRect = detailWrapper.getBoundingClientRect();
+    const avoidZones = wRect.height > 0
+      ? Array.from(avoidEls)
+          .map(el => {
+            const r = (el as HTMLElement).getBoundingClientRect();
+            return {
+              top: (r.top - wRect.top) / wRect.height,
+              bot: (r.bottom - wRect.top) / wRect.height,
+            };
+          })
+          .filter(z => z.bot > z.top + 0.001)
+      : [];
+
+    // Render detail content to one continuous canvas
+    const detailCanvas = await html2canvas(detailWrapper, {
       scale: 2,
       useCORS: true,
       logging: false,
+      backgroundColor: '#ffffff',
       letterRendering: true,
-    },
-    jsPDF: {
-      unit: 'mm',
-      format: 'a4',
-      orientation: 'portrait' as const,
-    },
-    pagebreak: {
-      mode: ['css', 'legacy'],
-      before: '.pdf-page-break',
-    },
-  };
+    });
+    document.body.removeChild(detailOff);
 
-  if (!headerInfo) {
-    await html2pdf().set(opt).from(wrapper).save();
-    return;
+    // Page geometry (mm)
+    const pageW = pdf.internal.pageSize.getWidth();   // 210
+    const pageH = pdf.internal.pageSize.getHeight();  // 297
+    const mx = 20;                                     // horizontal margin
+    const cw = pageW - mx * 2;                         // 170 content width
+    const hdrTopM = headerInfo ? HEADER_HEIGHT_MM : 15; // top margin with header
+    const firstTopM = 5;                                // first page: thead already provides header
+    const botM = 10;
+
+    // Image dimensions (mm)
+    const imgW = cw;
+    const imgH = (detailCanvas.height / detailCanvas.width) * imgW;
+
+    // Prepare header image (for pages 2+ only)
+    const hdrImg = headerInfo ? await renderHeaderImage(headerInfo) : null;
+    const hdrH = HEADER_HEIGHT_MM - 4;
+
+    // Slice canvas into pages with smart break-avoidance
+    let remain = imgH;
+    let srcY = 0;
+    let isFirstSlice = true;
+
+    while (remain > 0.5) {
+      // First page: small top margin (thead is part of content)
+      // Subsequent pages: larger top margin (header image added above)
+      const topM = isFirstSlice ? firstTopM : hdrTopM;
+      const slotH = pageH - topM - botM;
+
+      let chunk = Math.min(remain, slotH);
+      const startMm = imgH - remain;
+      const cutRatio = (startMm + chunk) / imgH;
+
+      // If the cut falls inside an avoid zone, move it before that zone
+      for (const z of avoidZones) {
+        if (cutRatio > z.top + 0.005 && cutRatio < z.bot - 0.005) {
+          const safeChunk = z.top * imgH - startMm;
+          if (safeChunk > slotH * 0.25) {
+            chunk = safeChunk;
+          }
+          break;
+        }
+      }
+
+      const chunkPx = Math.round((chunk / imgH) * detailCanvas.height);
+
+      pdf.addPage();
+
+      // Add header image only on pages 2+ (first page has its own thead header)
+      if (hdrImg && !isFirstSlice) {
+        pdf.addImage(hdrImg, 'PNG', mx, 3, cw, hdrH);
+      }
+
+      // Create canvas slice
+      const slice = document.createElement('canvas');
+      slice.width = detailCanvas.width;
+      slice.height = Math.max(1, chunkPx);
+      const ctx = slice.getContext('2d')!;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, slice.width, slice.height);
+      ctx.drawImage(
+        detailCanvas,
+        0, srcY, detailCanvas.width, chunkPx,
+        0, 0, slice.width, chunkPx,
+      );
+
+      pdf.addImage(slice.toDataURL('image/jpeg', 0.98), 'JPEG', mx, topM, imgW, chunk);
+
+      srcY += chunkPx;
+      remain -= chunk;
+      isFirstSlice = false;
+    }
   }
 
-  const headerDataUrl = await renderHeaderImage(headerInfo);
-
-  const worker = html2pdf().set(opt).from(wrapper);
-  const pdf = await worker.toPdf().get('pdf');
-
-  const totalPages = pdf.internal.getNumberOfPages();
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const headerImgWidth = pageWidth - 40;
-  const headerImgHeight = HEADER_HEIGHT_MM - 4;
-
-  for (let i = 2; i <= totalPages; i++) {
-    pdf.setPage(i);
-    pdf.addImage(headerDataUrl, 'PNG', 20, 3, headerImgWidth, headerImgHeight);
-  }
-
-  pdf.save(opt.filename);
+  pdf.save(pdfFilename);
 };
 
 export const exportToExcel = (data: ReportData) => {

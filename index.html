@@ -12,49 +12,18 @@
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-      /* Print styles for report */
-      @media print {
-        body {
-          background-color: white;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-          overflow: visible !important;
-          height: auto !important;
-        }
-        #root, #root > div, #root > div > div {
-          overflow: visible !important;
-          height: auto !important;
-          max-height: none !important;
-        }
-        .no-print { display: none !important; }
-        .print-break-inside-avoid { break-inside: avoid; }
-        .a4-screen img { max-height: 200px !important; object-fit: contain !important; }
-        @page { margin: 15mm 20mm; size: A4; }
-      }
-
-      /* A4 Paper */
+      /* ============ A4 Paper (screen) ============ */
       .a4-screen {
         width: 210mm; min-height: 297mm; padding: 15mm 20mm;
         margin: 0 auto; background: white;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
         position: relative;
       }
-      @media print {
-        .a4-screen {
-          width: 100%; min-height: auto;
-          box-shadow: none; margin: 0; padding: 0;
-          page-break-after: always; break-after: page;
-        }
-        .a4-screen.cover-page {
-          height: 267mm; max-height: 267mm; overflow: hidden;
-        }
-        .a4-screen:last-child { page-break-after: auto; break-after: auto; }
-      }
 
-      /* Report table styles */
+      /* ============ Report table styles ============ */
       .report-table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 11px; }
-      .report-table th { background-color: #f3f4f6; border: 1px solid #000; padding: 6px 4px; font-weight: 600; text-align: center; }
-      .report-table td { border: 1px solid #000; padding: 6px 4px; }
+      .report-table th { background-color: #f3f4f6; border: 1px solid #000; padding: 8px 6px; font-weight: 600; text-align: center; vertical-align: middle; }
+      .report-table td { border: 1px solid #000; padding: 8px 6px; vertical-align: middle; }
 
       /* Detail page table for repeating header/footer */
       .detail-table { border-collapse: collapse; }
@@ -63,11 +32,131 @@
       .detail-table > tbody > tr > td { padding: 0; vertical-align: top; }
 
       /* Gauge bars */
-      .gauge-container { width: 100%; height: 18px; background-color: #e5e7eb; border: 1px solid #9ca3af; position: relative; overflow: hidden; }
+      .gauge-container { width: 100%; height: 20px; background-color: #e5e7eb; border: 1px solid #9ca3af; position: relative; overflow: hidden; }
       .gauge-fill { height: 100%; transition: width 0.5s ease-out; display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; font-weight: bold; text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
       .gauge-fill.pass { background-color: #15803d; }
       .gauge-fill.fail { background-color: #b91c1c; }
       .gauge-fill.neutral { background-color: #94a3b8; }
+
+      /* ============================================================
+         PRINT STYLES — Optimized for browser Print → PDF
+         ============================================================ */
+      @media print {
+        /* ── Page configuration ── */
+        @page {
+          size: A4 portrait;
+          margin: 15mm 20mm;
+        }
+
+        /* ── Force background colors & images everywhere ── */
+        *, *::before, *::after {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+
+        /* ── Fix blank first page: remove html/body height constraints ── */
+        html, body {
+          background: white !important;
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        /* ── Flatten wrapper containers (#root → ReportPreview) ──
+             The DOM nests 6 levels of divs with overflow:hidden, h-screen,
+             h-full, and flex-1 between #root and the .a4-screen pages.
+             All must be reset so content flows naturally across pages. ── */
+        #root,
+        #root > *,
+        #root > * > *,
+        #root > * > * > *,
+        #root > * > * > * > *,
+        #root > * > * > * > * > *,
+        #root > * > * > * > * > * > * {
+          overflow: visible !important;
+          height: auto !important;
+          max-height: none !important;
+          min-height: 0 !important;
+        }
+
+        /* ── Remove wrapper backgrounds & extra padding ──
+             Targets the bg-slate-100 content area (depth 4)
+             and the p-6/p-12 scroll container (depth 5) ── */
+        #root > * > * > * > *,
+        #root > * > * > * > * > * {
+          background: transparent !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        /* ── Hide non-print UI (nav, toolbar, editor sidebar, overlays) ── */
+        .no-print {
+          display: none !important;
+        }
+
+        /* ── A4 page containers ── */
+        .a4-screen {
+          width: 100% !important;
+          min-height: auto !important;
+          box-shadow: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          page-break-after: always;
+          break-after: page;
+        }
+        .a4-screen.cover-page {
+          height: 267mm;
+          max-height: 267mm !important;
+          overflow: hidden !important;
+        }
+        .a4-screen:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
+
+        /* ── Table & section break control ── */
+        .print-break-inside-avoid {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .report-table {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        tr {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        /* ── Images ── */
+        .a4-screen img {
+          max-height: 200px !important;
+          object-fit: contain !important;
+        }
+
+        /* ── Chart preservation ──
+             Recharts ResponsiveContainer must keep its rendered dimensions ── */
+        .recharts-responsive-container {
+          height: 192px !important;
+          min-height: 192px !important;
+        }
+
+        /* ── Font scaling for A4 legibility ── */
+        .a4-screen {
+          font-size: 11px;
+          line-height: 1.6;
+        }
+        .report-table {
+          font-size: 10px !important;
+        }
+        .report-table th,
+        .report-table td {
+          padding: 6px 5px !important;
+        }
+      }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 h-screen overflow-hidden">

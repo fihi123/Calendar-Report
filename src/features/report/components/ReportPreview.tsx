@@ -87,7 +87,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'] 
               {Object.entries(groupedMetrics).map(([groupName, metrics]) => (
                 <React.Fragment key={groupName}>
                   <tr className="bg-gray-100">
-                    <td colSpan={5} className="font-bold text-xs px-3 py-1.5 border border-black text-gray-800">■ {groupName}</td>
+                    <td colSpan={5} className="font-bold text-[11px] px-3 py-2 border border-black text-gray-800">■ {groupName}</td>
                   </tr>
                   {metrics.map((metric, idx) => <MetricRow key={`${groupName}-${idx}`} metric={metric} />)}
                 </React.Fragment>
@@ -96,7 +96,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'] 
                 <>
                   {hasGroups && (
                     <tr className="bg-gray-100">
-                      <td colSpan={5} className="font-bold text-xs px-3 py-1.5 border border-black text-gray-800">■ 공통 / 기타</td>
+                      <td colSpan={5} className="font-bold text-[11px] px-3 py-2 border border-black text-gray-800">■ 공통 / 기타</td>
                     </tr>
                   )}
                   {ungroupedMetrics.map((metric, idx) => <MetricRow key={`common-${idx}`} metric={metric} />)}
@@ -109,7 +109,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'] 
 
       {lot.metrics.length > 0 && <ChartComponent data={lot.metrics.map(m => ({ ...m, target: (m.min + m.max) / 2 }))} />}
 
-      <div className="border border-black p-4 mb-4 mt-6 bg-gray-50 shadow-sm">
+      <div className="border border-black p-5 mb-4 mt-6 bg-gray-50 shadow-sm print-break-inside-avoid">
         {yieldMode === 'packaging' ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between px-2 text-center">
@@ -242,13 +242,13 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                   <tbody>
                     {data.info.map(item => (
                       <tr key={item.id}>
-                        <th className="py-2 text-sm font-bold text-gray-500 w-24 align-top">{item.label}</th>
-                        <td className="py-2 text-lg font-medium">{item.value}</td>
+                        <th className="py-3 text-sm font-bold text-gray-500 w-28 align-top">{item.label}</th>
+                        <td className="py-3 text-lg font-medium">{item.value}</td>
                       </tr>
                     ))}
                     <tr>
-                      <th className="py-2 text-sm font-bold text-gray-500 w-24 align-top">작성일</th>
-                      <td className="py-2 text-lg font-medium">{currentDate}</td>
+                      <th className="py-3 text-sm font-bold text-gray-500 w-28 align-top">작성일</th>
+                      <td className="py-3 text-lg font-medium">{currentDate}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -318,7 +318,7 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
           <thead>
             <tr>
               <td>
-                <div className="flex justify-between items-end border-b-2 border-gray-800 pb-2 mb-6">
+                <div className="flex justify-between items-end border-b-2 border-gray-800 pb-3 mb-8">
                   <div>
                     <h2 className="text-xl font-bold font-serif text-gray-900">{data.title} - 상세 보고서</h2>
                     <p className="text-[10px] text-gray-500 uppercase tracking-wide">Detailed Inspection Report</p>
@@ -334,7 +334,7 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
           <tfoot>
             <tr>
               <td>
-                <div className="pt-4 border-t-2 border-gray-200 text-center mt-6">
+                <div className="pt-4 border-t-2 border-gray-200 text-center mt-8">
                   <p className="text-[9px] text-gray-400 uppercase tracking-widest">Confidential Document | Unauthorized reproduction prohibited</p>
                 </div>
               </td>
@@ -343,8 +343,8 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
           <tbody>
             <tr>
               <td>
-                <section className="mb-8 print-break-inside-avoid">
-                  <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">1. 개요 (Overview)</h2>
+                <section className="mb-10 print-break-inside-avoid">
+                  <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">1. 개요 (Overview)</h2>
                   <table className="report-table">
                     <colgroup><col className="w-[15%]" /><col className="w-[35%]" /><col className="w-[15%]" /><col className="w-[35%]" /></colgroup>
                     <tbody>
@@ -362,13 +362,13 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                   </table>
                 </section>
 
-                <section className="mb-8 print-break-inside-avoid">
-                  <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">2. 품질 검사 및 생산 지표 (Inspection Data)</h2>
+                <section className="mb-10 print-break-inside-avoid">
+                  <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">2. 품질 검사 및 생산 지표 (Inspection Data)</h2>
                   {isMultiLot(data.reportType) ? (
                     <>
                       {data.lots.map((lot, idx) => (
                         <div key={lot.id} className="mb-6">
-                          <div className="bg-gray-800 text-white text-xs font-bold px-3 py-1.5 mb-3 flex items-center gap-2">
+                          <div className="bg-gray-800 text-white text-[11px] font-bold px-3 py-2 mb-3 flex items-center gap-2">
                             <span>■ {lot.name || `Lot ${idx + 1}`}</span>
                           </div>
                           <LotSection lot={lot} reportType={data.reportType} />
@@ -388,29 +388,29 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                   )}
                 </section>
 
-                <section className="mb-8 print-break-inside-avoid">
-                  <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">3. 종합 의견 (Summary)</h2>
+                <section className="mb-10 print-break-inside-avoid">
+                  <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">3. 종합 의견 (Summary)</h2>
                   <div className="grid grid-cols-1 gap-0 border border-black divide-y divide-black">
-                    <div className="p-3 bg-white min-h-[80px]">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xs font-bold text-gray-900 flex items-center gap-2">
+                    <div className="p-4 bg-white min-h-[90px]">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-[12px] font-bold text-gray-900 flex items-center gap-2">
                           <span className="w-1.5 h-1.5 bg-gray-900 rounded-full"></span> 종합 요약 (Executive Summary)
                         </h3>
                         {getDecisionBadge(data.decision)}
                       </div>
-                      <p className="whitespace-pre-wrap leading-relaxed text-xs text-gray-700 pl-3.5">{data.summary || '내용 없음'}</p>
+                      <p className="whitespace-pre-wrap leading-[1.8] text-[11px] text-gray-700 pl-3.5">{data.summary || '내용 없음'}</p>
                     </div>
-                    <div className="p-3 bg-white min-h-[80px]">
-                      <h3 className="text-xs font-bold text-red-700 mb-2 flex items-center gap-2">
+                    <div className="p-4 bg-white min-h-[90px]">
+                      <h3 className="text-[12px] font-bold text-red-700 mb-3 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-red-700 rounded-full"></span> 이슈 및 특이사항 (Issues)
                       </h3>
-                      <p className="whitespace-pre-wrap leading-relaxed text-xs text-gray-700 pl-3.5">{data.issues || '특이사항 없음'}</p>
+                      <p className="whitespace-pre-wrap leading-[1.8] text-[11px] text-gray-700 pl-3.5">{data.issues || '특이사항 없음'}</p>
                     </div>
                   </div>
                 </section>
 
-                <section className="mb-8 print-break-inside-avoid">
-                  <h2 className="text-sm font-bold border-l-4 border-gray-800 pl-2 mb-3 uppercase tracking-tight">4. 현장 사진 (Site Photos)</h2>
+                <section className="mb-10 print-break-inside-avoid">
+                  <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">4. 현장 사진 (Site Photos)</h2>
                   {data.images.length === 0 ? (
                     <div className="border border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center text-gray-400 bg-gray-50">
                       <span className="text-xs">첨부된 사진이 없습니다.</span>
@@ -453,13 +453,13 @@ const MetricRow: React.FC<{ metric: ProductionMetric }> = ({ metric }) => {
 
   return (
     <tr>
-      <td className="font-semibold bg-gray-50/50 text-center text-[10px]">{metric.name}</td>
-      <td className="text-gray-600 text-center font-mono text-[10px]">
+      <td className="font-semibold bg-gray-50/50 text-center text-[11px]">{metric.name}</td>
+      <td className="text-gray-600 text-center font-mono text-[11px]">
         {isSet ? `${min} ~ ${max} ${metric.unit}` : '-'}
       </td>
-      <td className="font-bold text-center">{actual}</td>
+      <td className="font-bold text-center text-[11px]">{actual}</td>
       <td className="align-middle px-2">
-        <div className="gauge-container rounded-sm h-[14px]">
+        <div className="gauge-container rounded-sm h-[16px]">
           <div
             className={`gauge-fill ${isPass ? 'pass' : (isSet ? 'fail' : 'neutral')}`}
             style={{ width: isSet ? `${percentage}%` : '0%' }}
@@ -474,7 +474,7 @@ const MetricRow: React.FC<{ metric: ProductionMetric }> = ({ metric }) => {
           )}
         </div>
       </td>
-      <td className={`font-bold text-center text-[10px] ${isPass ? 'text-green-700 bg-green-50' : (isSet ? 'text-red-600 bg-red-50' : 'text-gray-400')}`}>
+      <td className={`font-bold text-center text-[11px] ${isPass ? 'text-green-700 bg-green-50' : (isSet ? 'text-red-600 bg-red-50' : 'text-gray-400')}`}>
         {isSet ? (isPass ? 'PASS' : 'FAIL') : '-'}
       </td>
     </tr>

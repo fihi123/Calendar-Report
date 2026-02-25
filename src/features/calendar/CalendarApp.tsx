@@ -18,27 +18,28 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  BrainCircuit,
   Calendar as CalendarIcon,
   Factory,
   Package,
   Settings,
-  FileText
+  FileText,
+  CheckCircle2
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/Button';
-import { AIAssistant } from './components/AIAssistant';
 import { TeamManagerModal } from './components/TeamManagerModal';
+import StatusSidebar from './components/StatusSidebar';
 import { TEAM_MEMBERS, INITIAL_EVENTS } from './constants';
 import { CalendarEvent, EventType, TeamMember } from './types';
-import { generateWeeklySummary } from './services/geminiService';
 
-const STORAGE_KEY = 'teamsync-team-members';
+const STORAGE_KEY_TEAM = 'teamsync-team-members';
+const STORAGE_KEY_EVENTS = 'teamsync-calendar-events';
+const STORAGE_KEY_COMPLETED = 'teamsync-completed-reports';
 
 const loadTeamMembers = (): TeamMember[] => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY_TEAM);
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -47,18 +48,63 @@ const loadTeamMembers = (): TeamMember[] => {
   return TEAM_MEMBERS;
 };
 
+const loadEvents = (): CalendarEvent[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_EVENTS);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((e: any) => ({
+          ...e,
+          start: new Date(e.start),
+          end: new Date(e.end),
+        }));
+      }
+    }
+  } catch { /* ignore */ }
+  return INITIAL_EVENTS;
+};
+
+export interface CompletionRecord {
+  eventId: string;
+  decision: string;
+  issues: string;
+}
+
+const loadCompletionRecords = (): CompletionRecord[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_COMPLETED);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Migrate: old format was string[], new format is CompletionRecord[]
+        if (typeof parsed[0] === 'string') {
+          return parsed.map((id: string) => ({ eventId: id, decision: '적합', issues: '' }));
+        }
+        return parsed;
+      }
+    }
+  } catch { /* ignore */ }
+  return [];
+};
+
 const CalendarApp: React.FC = () => {
   const navigate = useNavigate();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(loadTeamMembers);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(teamMembers));
+    localStorage.setItem(STORAGE_KEY_TEAM, JSON.stringify(teamMembers));
   }, [teamMembers]);
 
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
-  const [isAIAddOpen, setIsAIAddOpen] = useState(false);
+  const [events, setEvents] = useState<CalendarEvent[]>(loadEvents);
+  const [completionRecords, setCompletionRecords] = useState<CompletionRecord[]>(loadCompletionRecords);
+
+  const completedEventIds = useMemo(
+    () => new Set(completionRecords.map(r => r.eventId)),
+    [completionRecords]
+  );
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
@@ -69,8 +115,20 @@ const CalendarApp: React.FC = () => {
   const [newEventStart, setNewEventStart] = useState('');
   const [newEventEnd, setNewEventEnd] = useState('');
 
-  const [summary, setSummary] = useState<string | null>(null);
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  // Persist events to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(events));
+  }, [events]);
+
+  // Reload completion records on focus (when returning from report page)
+  useEffect(() => {
+    const handleFocus = () => {
+      setCompletionRecords(loadCompletionRecords());
+    };
+    window.addEventListener('focus', handleFocus);
+    setCompletionRecords(loadCompletionRecords());
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   const daysInMonth = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 });
@@ -94,21 +152,39 @@ const CalendarApp: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
+  const navigateToReport = (event: CalendarEvent) => {
+    navigate('/report', {
+      state: {
+        eventId: event.id,
+        date: format(event.start, 'yyyy-MM-dd'),
+        title: event.title,
+        type: event.type,
+        mode: 'write',
+      },
+    });
+  };
+
+  const viewReport = (event: CalendarEvent) => {
+    navigate('/report', {
+      state: {
+        eventId: event.id,
+        date: format(event.start, 'yyyy-MM-dd'),
+        title: event.title,
+        type: event.type,
+        mode: 'view',
+      },
+    });
+  };
+
   const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
     e.stopPropagation();
     if (event.type === 'manufacturing' || event.type === 'packaging') {
-      navigate('/report', {
-        state: {
-          date: format(event.start, 'yyyy-MM-dd'),
-          title: event.title,
-          type: event.type,
-        },
-      });
+      navigateToReport(event);
     }
   };
 
   const addEvent = (event: CalendarEvent) => {
-    setEvents([...events, event]);
+    setEvents(prev => [...prev, event]);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -127,21 +203,6 @@ const CalendarApp: React.FC = () => {
     addEvent(newEvent);
     setIsEventModalOpen(false);
     setNewEventTitle('');
-  };
-
-  const handleGenerateSummary = async () => {
-    setIsGeneratingSummary(true);
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-
-    const visibleEvents = events.filter(e =>
-      isWithinInterval(e.start, { start: monthStart, end: monthEnd }) ||
-      isWithinInterval(e.end, { start: monthStart, end: monthEnd })
-    );
-
-    const result = await generateWeeklySummary(visibleEvents);
-    setSummary(result);
-    setIsGeneratingSummary(false);
   };
 
   const getMemberById = (id: string) => teamMembers.find(m => m.id === id);
@@ -205,40 +266,14 @@ const CalendarApp: React.FC = () => {
           >
             <Settings className="w-4 h-4" />
           </button>
-
-          <Button variant="secondary" onClick={handleGenerateSummary} disabled={isGeneratingSummary}>
-            <BrainCircuit className="w-4 h-4 mr-2 text-purple-600" />
-            {isGeneratingSummary ? 'Analyzing...' : 'Summary'}
-          </Button>
-
-          <Button onClick={() => setIsAIAddOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Smart Add</span>
-          </Button>
         </div>
       </header>
 
-      {/* Summary Banner */}
-      {summary && (
-        <div className="bg-purple-50 px-6 py-3 border-b border-purple-100 flex justify-between items-start animate-fade-in">
-           <div className="flex gap-3">
-             <BrainCircuit className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-             <div>
-                <h3 className="text-sm font-bold text-purple-900">Monthly Insight</h3>
-                <p className="text-sm text-purple-800 mt-1 leading-relaxed">{summary}</p>
-             </div>
-           </div>
-           <button onClick={() => setSummary(null)} className="text-purple-400 hover:text-purple-600">
-              <span className="sr-only">Dismiss</span>
-              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L10 8.586 5.707 4.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-           </button>
-        </div>
-      )}
-
-      {/* Main Calendar Grid */}
-      <div className="flex flex-auto overflow-hidden">
-        <div className="flex flex-auto flex-col">
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold leading-6 text-slate-500 lg:flex-none">
+      {/* Main: Calendar (70%) + Status Sidebar (30%) */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Calendar Grid */}
+        <div className="flex flex-col w-full lg:w-[70%] overflow-hidden">
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold leading-6 text-slate-500">
             <div className="bg-white py-2 text-rose-500">Sun</div>
             <div className="bg-white py-2">Mon</div>
             <div className="bg-white py-2">Tue</div>
@@ -248,7 +283,7 @@ const CalendarApp: React.FC = () => {
             <div className="bg-white py-2 text-rose-500">Sat</div>
           </div>
 
-          <div className="flex bg-slate-200 text-xs leading-6 text-slate-700 lg:flex-auto">
+          <div className="flex bg-slate-200 text-xs leading-6 text-slate-700 flex-auto">
             <div className="hidden w-full lg:grid lg:grid-cols-7 lg:grid-rows-5 lg:gap-px">
               {daysInMonth.map((day) => {
                 const dayEvents = filteredEvents.filter(event =>
@@ -258,8 +293,11 @@ const CalendarApp: React.FC = () => {
 
                 const getEventStyle = (event: CalendarEvent) => {
                     const member = getMemberById(event.memberId);
+                    const isCompleted = completedEventIds.has(event.id);
                     let classes = `group flex flex-col px-2 py-1 text-xs leading-5 hover:opacity-90 transition-opacity cursor-pointer mb-1 rounded mx-1 `;
-                    if (member) {
+                    if (isCompleted) {
+                        classes += 'bg-emerald-50 text-emerald-700 border border-emerald-200 ';
+                    } else if (member) {
                         classes += member.color;
                     } else {
                         classes += ' bg-gray-100 text-gray-700';
@@ -284,15 +322,20 @@ const CalendarApp: React.FC = () => {
                     <div className="mt-2 space-y-1 overflow-y-auto max-h-[100px] no-scrollbar">
                       {dayEvents.map(event => {
                          const member = getMemberById(event.memberId);
+                         const isCompleted = completedEventIds.has(event.id);
                          return (
                             <div key={event.id} className={getEventStyle(event)} onClick={(e) => handleEventClick(event, e)}>
                                 <div className="flex items-center gap-1">
-                                    {member && <img src={member.avatar} className="w-4 h-4 rounded-full border border-white/50 flex-shrink-0" />}
+                                    {isCompleted ? (
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                                    ) : (
+                                      member && <img src={member.avatar} className="w-4 h-4 rounded-full border border-white/50 flex-shrink-0" />
+                                    )}
                                     <div className="overflow-hidden">
                                       <div className="flex items-center">
                                         {getTypeBadge(event.type)}
-                                        <span className="font-semibold truncate">{event.title}</span>
-                                        {(event.type === 'manufacturing' || event.type === 'packaging') && (
+                                        <span className={`font-semibold truncate ${isCompleted ? 'line-through opacity-70' : ''}`}>{event.title}</span>
+                                        {!isCompleted && (event.type === 'manufacturing' || event.type === 'packaging') && (
                                           <FileText size={10} className="ml-1 opacity-40 flex-shrink-0" />
                                         )}
                                       </div>
@@ -327,15 +370,14 @@ const CalendarApp: React.FC = () => {
                                  {dayEvents.length === 0 && <span className="text-slate-400 text-sm italic">No events</span>}
                                  {dayEvents.map(event => {
                                      const member = getMemberById(event.memberId);
+                                     const isCompleted = completedEventIds.has(event.id);
                                      return (
-                                         <div key={event.id} className={`p-3 rounded-lg border-l-4 ${member?.color} bg-white shadow-sm border border-slate-100 cursor-pointer`} onClick={(e) => handleEventClick(event, e)}>
+                                         <div key={event.id} className={`p-3 rounded-lg border-l-4 ${isCompleted ? 'border-emerald-400 bg-emerald-50' : member?.color + ' bg-white'} shadow-sm border border-slate-100 cursor-pointer`} onClick={(e) => handleEventClick(event, e)}>
                                              <div className="flex justify-between items-start">
                                                  <div className="flex items-center gap-2">
                                                     {getTypeBadge(event.type)}
-                                                    <span className="font-medium text-slate-900">{event.title}</span>
-                                                    {(event.type === 'manufacturing' || event.type === 'packaging') && (
-                                                      <FileText size={12} className="opacity-40 flex-shrink-0" />
-                                                    )}
+                                                    <span className={`font-medium text-slate-900 ${isCompleted ? 'line-through opacity-70' : ''}`}>{event.title}</span>
+                                                    {isCompleted && <CheckCircle2 size={14} className="text-emerald-500" />}
                                                  </div>
                                                  <span className="text-xs text-slate-500">{format(event.start, 'h:mm a')}</span>
                                              </div>
@@ -352,6 +394,18 @@ const CalendarApp: React.FC = () => {
                  })}
             </div>
           </div>
+        </div>
+
+        {/* Status Sidebar (30%) - hidden on mobile */}
+        <div className="hidden lg:block w-[30%] flex-shrink-0">
+          <StatusSidebar
+            events={events}
+            completedEventIds={completedEventIds}
+            completionRecords={completionRecords}
+            teamMembers={teamMembers}
+            onNavigateToReport={navigateToReport}
+            onViewReport={viewReport}
+          />
         </div>
       </div>
 
@@ -437,14 +491,6 @@ const CalendarApp: React.FC = () => {
             </div>
         </form>
       </Modal>
-
-      {/* AI Sidebar */}
-      <AIAssistant
-        isOpen={isAIAddOpen}
-        onClose={() => setIsAIAddOpen(false)}
-        onAddEvent={addEvent}
-        teamMembers={teamMembers}
-      />
 
       <TeamManagerModal
         isOpen={isTeamModalOpen}

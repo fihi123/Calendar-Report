@@ -1,23 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ReportPreview from './components/ReportPreview';
 import EditorPanel from './components/EditorPanel';
 import { ReportData, ReportType } from './types';
-import { Printer, Save, FileUp, Menu, X, FileDown, Table, RotateCcw } from 'lucide-react';
+import { Printer, Save, FileUp, Menu, X, FileDown, Table, RotateCcw, Languages } from 'lucide-react';
 import { exportToPdf, exportToExcel } from './utils/exportUtils';
+import { buildDefaultValueMap, type Lang } from './i18n';
 
 interface CalendarLinkState {
+  eventId?: string;
   date: string;
   title: string;
   type: 'manufacturing' | 'packaging';
+  mode?: 'write' | 'view';
 }
+
+const STORAGE_KEY_COMPLETED = 'teamsync-completed-reports';
 
 const initialData: ReportData = {
   reportType: 'single-manufacturing',
-  title: '시생산/품질 검사 보고서',
+  title: '시생산 결과 보고서',
+  language: 'ko',
   date: new Date().toISOString().split('T')[0],
   info: [
-    { id: '1', label: '부서', value: '품질보증팀' },
+    { id: '1', label: '부서', value: '공정개발팀' },
     { id: '2', label: '작성자', value: '김철수 책임' },
     { id: '3', label: 'LOT No.', value: '2025-BATCH-001' },
     { id: '4', label: '제품명', value: '하이드라 세럼' },
@@ -46,12 +52,14 @@ const initialData: ReportData = {
         theoretical_qty: 2000,
         actual_qty: 1985,
       },
+      colorMatching: { aqueous: [], oil: [] },
+      corrections: [],
     },
   ],
   approvals: {
-    drafter: { department: '품질보증팀', position: '책임', name: '김철수', date: new Date().toISOString().split('T')[0] },
-    reviewer: { department: '품질보증팀', position: '수석', name: '이영희', date: '' },
-    approver: { department: '품질보증팀', position: '팀장', name: '박부장', date: '' },
+    drafter: { department: '공정개발팀', position: '책임', name: '김철수', date: new Date().toISOString().split('T')[0] },
+    reviewer: { department: '공정개발팀', position: '수석', name: '이영희', date: '' },
+    approver: { department: '공정개발팀', position: '팀장', name: '박부장', date: '' },
   },
   issues: '- 포장 라인 초기 세팅 시간 지연 (15분)\n- 2호기 노즐 압력 미세 조정 완료',
   conclusion: '',
@@ -60,11 +68,46 @@ const initialData: ReportData = {
 
 const ReportApp: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [reportData, setReportData] = useState<ReportData>(initialData);
   const [showEditor, setShowEditor] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [linkedEventId, setLinkedEventId] = useState<string | null>(null);
+  const prevLangRef = useRef<Lang>(reportData.language || 'ko');
 
-  // Feature 1: Pre-populate from calendar event
+  // Translate known default data values when language changes
+  useEffect(() => {
+    const currentLang: Lang = reportData.language || 'ko';
+    const prevLang = prevLangRef.current;
+    if (currentLang === prevLang) return;
+    prevLangRef.current = currentLang;
+
+    const valMap = buildDefaultValueMap(prevLang, currentLang);
+    const mapValue = (v: string) => valMap.get(v) ?? v;
+
+    setReportData(prev => ({
+      ...prev,
+      title: mapValue(prev.title),
+      summary: mapValue(prev.summary),
+      issues: mapValue(prev.issues),
+      info: prev.info.map(item => ({
+        ...item,
+        label: mapValue(item.label),
+        value: mapValue(item.value),
+      })),
+      lots: prev.lots.map(lot => ({
+        ...lot,
+        metrics: lot.metrics.map(m => ({ ...m, name: mapValue(m.name) })),
+      })),
+      approvals: {
+        drafter: { ...prev.approvals.drafter, department: mapValue(prev.approvals.drafter.department), position: mapValue(prev.approvals.drafter.position) },
+        reviewer: { ...prev.approvals.reviewer, department: mapValue(prev.approvals.reviewer.department), position: mapValue(prev.approvals.reviewer.position) },
+        approver: { ...prev.approvals.approver, department: mapValue(prev.approvals.approver.department), position: mapValue(prev.approvals.approver.position) },
+      },
+    }));
+  }, [reportData.language]);
+
+  // Feature 1: Pre-populate from calendar event or load saved report for viewing
   useEffect(() => {
     const state = location.state as CalendarLinkState | null;
     if (state?.date && state?.title) {
@@ -72,12 +115,30 @@ const ReportApp: React.FC = () => {
         ? 'single-filling'
         : 'single-manufacturing';
 
+      if (state.eventId) {
+        setLinkedEventId(state.eventId);
+      }
+
+      // View mode: load saved report data from localStorage
+      if (state.mode === 'view' && state.eventId) {
+        try {
+          const saved = localStorage.getItem(`teamsync-report-${state.eventId}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            setReportData({ ...initialData, ...parsed });
+            window.history.replaceState({}, document.title);
+            return;
+          }
+        } catch { /* fallback to write mode */ }
+      }
+
+      // Write mode: pre-populate from calendar event
       setReportData(prev => ({
         ...prev,
         date: state.date,
         reportType,
         info: prev.info.map(item =>
-          item.label.includes('제품명') ? { ...item, value: state.title } : item
+          (item.label.includes('제품명') || item.label.includes('Product')) ? { ...item, value: state.title } : item
         ),
       }));
 
@@ -93,17 +154,50 @@ const ReportApp: React.FC = () => {
     const dataStr = JSON.stringify(reportData, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `report_${reportData.date}.json`;
-    link.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report_${reportData.date}.json`;
+    a.click();
     URL.revokeObjectURL(url);
-  }, [reportData]);
+
+    // Persist full report data for later viewing
+    if (linkedEventId) {
+      localStorage.setItem(`teamsync-report-${linkedEventId}`, dataStr);
+    }
+
+    // Mark event as completed with quality data, then return to calendar
+    if (linkedEventId) {
+      try {
+        const records: { eventId: string; decision: string; issues: string }[] =
+          JSON.parse(localStorage.getItem(STORAGE_KEY_COMPLETED) || '[]');
+
+        // Migrate old string[] format if needed
+        const normalized = records.map((r: any) =>
+          typeof r === 'string' ? { eventId: r, decision: '적합', issues: '' } : r
+        );
+
+        const existing = normalized.findIndex((r: any) => r.eventId === linkedEventId);
+        const newRecord = {
+          eventId: linkedEventId,
+          decision: reportData.decision || '적합',
+          issues: reportData.issues || '',
+        };
+
+        if (existing >= 0) {
+          normalized[existing] = newRecord;
+        } else {
+          normalized.push(newRecord);
+        }
+        localStorage.setItem(STORAGE_KEY_COMPLETED, JSON.stringify(normalized));
+      } catch { /* ignore */ }
+      navigate('/calendar');
+    }
+  }, [reportData, linkedEventId, navigate]);
 
   const handleExportPdf = useCallback(async () => {
     setIsExporting(true);
     try {
-      const department = reportData.info.find(i => i.label.includes('부서'))?.value || '';
+      const department = reportData.info.find(i => i.label.includes('부서') || i.label.includes('Department'))?.value || '';
       const dateStr = new Date(reportData.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
       await exportToPdf(`report_${reportData.date}.pdf`, {
         title: reportData.title,
@@ -229,6 +323,18 @@ const ReportApp: React.FC = () => {
           <button onClick={handleReset} className="flex items-center gap-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium" title="초기화">
             <RotateCcw size={14} />
             <span className="hidden sm:inline">초기화</span>
+          </button>
+          <button
+            onClick={() => setReportData(prev => ({ ...prev, language: prev.language === 'en' ? 'ko' : 'en' }))}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all text-xs font-bold border ${
+              reportData.language === 'en'
+                ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
+                : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'
+            }`}
+            title="한국어/English 전환"
+          >
+            <Languages size={14} />
+            <span>{reportData.language === 'en' ? 'EN' : '한'}</span>
           </button>
           <div className="h-5 w-px bg-gray-200 mx-0.5"></div>
           <button onClick={() => setShowEditor(!showEditor)} className="flex items-center gap-1.5 text-gray-500 hover:text-brand-700 hover:bg-gray-100 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium" title="Toggle Editor (Ctrl+E)">

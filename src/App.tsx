@@ -32,7 +32,7 @@ const App: React.FC = () => {
               }
             >
               <Calendar size={16} />
-              <span className="hidden sm:inline">AI 캘린더</span>
+              <span className="hidden sm:inline">캘린더</span>
             </NavLink>
             <NavLink
               to="/report"
@@ -45,7 +45,7 @@ const App: React.FC = () => {
               }
             >
               <FileText size={16} />
-              <span className="hidden sm:inline">AI 보고서</span>
+              <span className="hidden sm:inline">보고서</span>
             </NavLink>
           </div>
         </nav>

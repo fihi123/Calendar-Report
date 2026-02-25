@@ -18,15 +18,6 @@ export interface CalendarEvent {
   type: EventType;
 }
 
-export interface AIParsedEvent {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  assigneeName: string;
-  type: string;
-}
-
 export enum CalendarView {
   MONTH = 'MONTH',
   WEEK = 'WEEK'

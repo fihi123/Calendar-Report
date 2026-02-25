@@ -38,11 +38,35 @@ export type ReportType =
   | 'multi-manufacturing'
   | 'multi-filling';
 
+export interface ColorMaterial {
+  code: string;
+  name: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface ColorMatchingData {
+  aqueous: ColorMaterial[];
+  oil: ColorMaterial[];
+}
+
+export interface CorrectionEntry {
+  id: string;
+  type: string;
+  code: string;
+  name: string;
+  amount: number;
+  percentage: number;
+  memo: string;
+}
+
 export interface LotData {
   id: string;
   name: string;
   metrics: ProductionMetric[];
   yield: YieldData;
+  colorMatching?: ColorMatchingData;
+  corrections?: CorrectionEntry[];
 }
 
 export interface ApprovalEntry {
@@ -57,6 +81,7 @@ export interface ReportData {
   reportType: ReportType;
   title: string;
   date: string;
+  language?: 'ko' | 'en';
   info: InfoItem[];
   summary: string;
   decision?: string;

@@ -167,6 +167,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'editor.correctionTypes.other': '기타',
     'editor.batchSizeRef': '지시량 기준',
     'editor.batchSizeNotSet': '수율 섹션에서 지시량을 입력하면 자동 계산됩니다.',
+    'chart.compliance': '달성률 (%)',
+    'chart.rawValue': '원본 값',
   },
   en: {
     // Cover
@@ -334,6 +336,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'editor.correctionTypes.other': 'Other',
     'editor.batchSizeRef': 'Based on batch size',
     'editor.batchSizeNotSet': 'Enter batch size in Yield section for auto-calculation.',
+    'chart.compliance': 'Compliance (%)',
+    'chart.rawValue': 'Raw Values',
   },
 };
 

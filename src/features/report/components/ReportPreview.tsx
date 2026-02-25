@@ -36,18 +36,7 @@ const calculateYield = (lot: LotData, reportType: ReportData['reportType']) => {
   return { yieldRate, lossKg, lossRate };
 };
 
-const calculateAggregate = (lots: LotData[], reportType: ReportData['reportType']) => {
-  const yieldMode = getYieldMode(reportType);
-  if (yieldMode === 'packaging') {
-    const totalTheo = lots.reduce((sum, lot) => sum + (lot.yield.theoretical_qty || 0), 0);
-    const totalActual = lots.reduce((sum, lot) => sum + (lot.yield.actual_qty || 0), 0);
-    return totalTheo > 0 ? ((totalActual / totalTheo) * 100).toFixed(1) : '0.0';
-  } else {
-    const totalPlanned = lots.reduce((sum, lot) => sum + (lot.yield.planned || 0), 0);
-    const totalOutput = lots.reduce((sum, lot) => sum + (lot.yield.obtained || 0) + (lot.yield.samples || 0), 0);
-    return totalPlanned > 0 ? ((totalOutput / totalPlanned) * 100).toFixed(1) : '0.0';
-  }
-};
+
 
 const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType']; t: (key: string) => string }> = ({ lot, reportType, t }) => {
   const { yieldRate, lossKg, lossRate } = calculateYield(lot, reportType);
@@ -70,7 +59,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
 
   return (
     <>
-      <table className="report-table mb-4 table-fixed">
+      <table className="report-table mb-6 table-fixed">
         <thead>
           <tr>
             <th className="w-[20%]">{t('table.item')}</th>
@@ -108,11 +97,9 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
         </tbody>
       </table>
 
-      {lot.metrics.length > 0 && <ChartComponent data={lot.metrics.map(m => ({ ...m, target: (m.min + m.max) / 2 }))} />}
-
       {/* Color Matching Log - manufacturing only */}
       {reportType.endsWith('-manufacturing') && lot.colorMatching && (lot.colorMatching.aqueous.length > 0 || lot.colorMatching.oil.length > 0) && (
-        <div className="mb-4 mt-6">
+        <div className="mb-6 mt-6">
           <h3 className="text-[13px] font-bold border-l-4 border-amber-500 pl-3 mb-3 text-gray-800">{t('section.colorMatching')}</h3>
           <table className="report-table table-fixed">
             <thead>
@@ -147,7 +134,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
 
       {/* Corrections Log - manufacturing only */}
       {reportType.endsWith('-manufacturing') && (lot.corrections || []).length > 0 && (
-        <div className="mb-4 mt-4">
+        <div className="mb-6 mt-6">
           <h3 className="text-[13px] font-bold border-l-4 border-teal-500 pl-3 mb-3 text-gray-800">{t('section.corrections')}</h3>
           <table className="report-table table-fixed">
             <thead>
@@ -176,7 +163,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
         </div>
       )}
 
-      <div className="border border-black p-5 mb-4 mt-6 bg-gray-50 shadow-sm print-break-inside-avoid">
+      <div className="border border-black p-5 mb-6 mt-6 bg-gray-50 shadow-sm print-break-inside-avoid">
         {yieldMode === 'packaging' ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between px-2 text-center">
@@ -441,28 +428,25 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                 <section className="mb-10 print-break-inside-avoid">
                   <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.inspection')}</h2>
                   {isMultiLot(data.reportType) ? (
-                    <>
+                    <div className="space-y-8">
                       {data.lots.map((lot, idx) => (
-                        <div key={lot.id} className="mb-6">
-                          <div className="bg-gray-800 text-white text-[11px] font-bold px-3 py-2 mb-3 flex items-center gap-2">
+                        <div key={lot.id}>
+                          <div className="bg-gray-800 text-white text-[11px] font-bold px-3 py-2 mb-4 flex items-center gap-2">
                             <span>■ {lot.name || `Lot ${idx + 1}`}</span>
                           </div>
                           <LotSection lot={lot} reportType={data.reportType} t={t} />
                         </div>
                       ))}
-                      <div className="border-2 border-gray-800 p-3 bg-gray-50 mt-4">
-                        <div className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <span className="w-2 h-2 bg-brand-600 rounded-full"></span> {t('yield.aggregate')}
-                        </div>
-                        <div className="text-2xl font-bold text-blue-900 text-center">
-                          {calculateAggregate(data.lots, data.reportType)}%
-                        </div>
-                      </div>
-                    </>
+                    </div>
                   ) : (
                     <LotSection lot={data.lots[0]} reportType={data.reportType} t={t} />
                   )}
                 </section>
+
+                {/* Integrated Chart — all lots combined */}
+                {data.lots.some(lot => lot.metrics.length > 0) && (
+                  <ChartComponent lots={data.lots} t={t} />
+                )}
 
                 <section className="mb-10 print-break-inside-avoid">
                   <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.summary')}</h2>

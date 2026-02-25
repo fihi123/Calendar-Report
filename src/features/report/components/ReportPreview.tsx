@@ -406,7 +406,7 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
           <tbody>
             <tr>
               <td>
-                <section className="mb-10 print-break-inside-avoid">
+                <section className="mb-10">
                   <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.overview')}</h2>
                   <table className="report-table">
                     <colgroup><col className="w-[15%]" /><col className="w-[35%]" /><col className="w-[15%]" /><col className="w-[35%]" /></colgroup>
@@ -425,7 +425,7 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                   </table>
                 </section>
 
-                <section className="mb-10 print-break-inside-avoid">
+                <section className="mb-10">
                   <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.inspection')}</h2>
 
                   {/* Integrated Chart — all lots combined, at the top */}

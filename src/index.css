@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@media print {
+  .no-print { display: none !important; }
+  .print-break-inside-avoid { break-inside: avoid; }
+  .print-break-before { break-before: page; }
+  .print-break-after { break-after: page; }
+
+  /* Allow large sections to flow across pages naturally */
+  section { break-inside: auto; }
+
+  /* Keep individual items from splitting */
+  .report-table { break-inside: avoid; }
+  .report-table tr { break-inside: avoid; }
+
+  /* Section headings should stay with next content */
+  h2, h3 { break-after: avoid; }
+}

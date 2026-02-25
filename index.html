@@ -31,12 +31,10 @@
       .detail-table > tfoot > tr > td,
       .detail-table > tbody > tr > td { padding: 0; vertical-align: top; }
 
-      /* Gauge bars */
-      .gauge-container { width: 100%; height: 20px; background-color: #e5e7eb; border: 1px solid #9ca3af; position: relative; overflow: hidden; }
-      .gauge-fill { height: 100%; transition: width 0.5s ease-out; display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; font-weight: bold; text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
-      .gauge-fill.pass { background-color: #15803d; }
-      .gauge-fill.fail { background-color: #b91c1c; }
-      .gauge-fill.neutral { background-color: #94a3b8; }
+      /* Bullet chart — print-safe colors */
+      @media print {
+        .rounded-full { border-radius: 9999px !important; }
+      }
 
       /* ============================================================
          PRINT STYLES — Optimized for browser Print → PDF

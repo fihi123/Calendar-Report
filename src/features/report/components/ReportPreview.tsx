@@ -511,11 +511,14 @@ const MetricRow: React.FC<{ metric: ProductionMetric; idx?: number }> = ({ metri
   const { min, max, actual } = metric;
   const isSet = min !== 0 || max !== 0;
   const isPass = isSet && actual >= min && actual <= max;
+  const range = max - min;
 
-  let percentage = 0;
-  if (isSet && max > min) {
-    percentage = ((actual - min) / (max - min)) * 100;
-    percentage = Math.max(0, Math.min(100, percentage));
+  // Bullet chart: spec range occupies center 60% (20%–80%), margins show out-of-spec area
+  let markerPos = 50;
+  if (isSet && range > 0) {
+    const normalized = (actual - min) / range;
+    markerPos = 20 + normalized * 60;
+    markerPos = Math.max(3, Math.min(97, markerPos));
   }
 
   const rowBg = idx % 2 === 1 ? 'bg-gray-50/70' : '';
@@ -527,21 +530,37 @@ const MetricRow: React.FC<{ metric: ProductionMetric; idx?: number }> = ({ metri
         {isSet ? `${min} ~ ${max} ${metric.unit}` : '-'}
       </td>
       <td className="font-bold text-center text-[11px]">{actual}</td>
-      <td className="align-middle px-2">
-        <div className="gauge-container rounded-sm h-[16px]">
-          <div
-            className={`gauge-fill ${isPass ? 'pass' : (isSet ? 'fail' : 'neutral')}`}
-            style={{ width: isSet ? `${percentage}%` : '0%' }}
-          >
-            {isSet && <span className="text-[8px]">{percentage.toFixed(0)}%</span>}
+      <td className="align-middle px-3">
+        {isSet ? (
+          <div className="relative h-[18px]">
+            {/* Track background */}
+            <div className="absolute inset-0 rounded-full" style={{ border: '1px solid #d1d5db' }} />
+            {/* Spec range zone (center 60%) */}
+            <div
+              className="absolute top-[2px] bottom-[2px] rounded-full"
+              style={{ left: '20%', width: '60%', border: '1px solid #d1d5db' }}
+            />
+            {/* LSL boundary */}
+            <div className="absolute top-0 bottom-0 w-[2px] rounded-full" style={{ left: '20%', transform: 'translateX(-50%)', backgroundColor: '#e67e22' }} />
+            {/* Center (midpoint) line */}
+            <div className="absolute top-[3px] bottom-[3px] w-px" style={{ left: '50%', transform: 'translateX(-50%)', backgroundColor: '#94a3b8' }} />
+            {/* USL boundary */}
+            <div className="absolute top-0 bottom-0 w-[2px] rounded-full" style={{ left: '80%', transform: 'translateX(-50%)', backgroundColor: '#e67e22' }} />
+            {/* Actual value marker */}
+            <div
+              className="absolute top-1/2 w-[11px] h-[11px] rounded-full"
+              style={{
+                left: `${markerPos}%`,
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: isPass ? '#16a34a' : '#dc2626',
+                border: '2.5px solid white',
+                boxShadow: '0 0 0 1.5px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15)',
+              }}
+            />
           </div>
-          {isSet && (
-            <>
-              <div className="absolute top-0 bottom-0 w-px bg-black/20 left-0"></div>
-              <div className="absolute top-0 bottom-0 w-px bg-black/20 right-0"></div>
-            </>
-          )}
-        </div>
+        ) : (
+          <div className="h-[16px] bg-gray-50 rounded-full border border-gray-200" />
+        )}
       </td>
       <td className={`font-bold text-center text-[11px] ${isPass ? 'text-green-700 bg-green-50' : (isSet ? 'text-red-600 bg-red-50' : 'text-gray-400')}`}>
         {isSet ? (isPass ? 'PASS' : 'FAIL') : '-'}

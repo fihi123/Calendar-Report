@@ -427,8 +427,14 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
 
                 <section className="mb-10 print-break-inside-avoid">
                   <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.inspection')}</h2>
+
+                  {/* Integrated Chart — all lots combined, at the top */}
+                  {data.lots.some(lot => lot.metrics.length > 0) && (
+                    <ChartComponent lots={data.lots} t={t} />
+                  )}
+
                   {isMultiLot(data.reportType) ? (
-                    <div className="space-y-8">
+                    <div className="space-y-8 mt-6">
                       {data.lots.map((lot, idx) => (
                         <div key={lot.id}>
                           <div className="bg-gray-800 text-white text-[11px] font-bold px-3 py-2 mb-4 flex items-center gap-2">
@@ -442,11 +448,6 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                     <LotSection lot={data.lots[0]} reportType={data.reportType} t={t} />
                   )}
                 </section>
-
-                {/* Integrated Chart — all lots combined */}
-                {data.lots.some(lot => lot.metrics.length > 0) && (
-                  <ChartComponent lots={data.lots} t={t} />
-                )}
 
                 <section className="mb-10 print-break-inside-avoid">
                   <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.summary')}</h2>

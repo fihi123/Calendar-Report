@@ -364,16 +364,25 @@ const ReportApp: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content — side-by-side on desktop */}
       <div className="flex flex-1 overflow-hidden bg-slate-100 relative">
-        <div className="flex-1 overflow-y-auto p-6 md:p-12 flex justify-center items-start">
+        {/* Report Preview — left side, fills remaining space */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center items-start">
           <ReportPreview data={reportData} />
         </div>
 
-        {/* Editor Sidebar */}
+        {/* Editor Panel — right side on desktop */}
+        {/* Desktop (lg+): inline flex panel */}
+        {showEditor && (
+          <div className="hidden lg:flex w-[55%] min-w-[480px] max-w-[720px] border-l border-gray-200 bg-white no-print">
+            <EditorPanel data={reportData} onChange={setReportData} />
+          </div>
+        )}
+
+        {/* Mobile/Tablet: keep slide-over editor */}
         <div
           className={`
-            fixed right-0 top-[calc(3.5rem+2.75rem)] bottom-0 w-full md:w-[500px] bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] z-20 transform transition-transform duration-300 ease-in-out no-print border-l border-gray-200
+            lg:hidden fixed right-0 top-[calc(3.5rem+2.75rem)] bottom-0 w-full md:w-[500px] bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] z-20 transform transition-transform duration-300 ease-in-out no-print border-l border-gray-200
             ${showEditor ? 'translate-x-0' : 'translate-x-full'}
           `}
         >
@@ -382,7 +391,7 @@ const ReportApp: React.FC = () => {
 
         {showEditor && (
           <div
-            className="fixed inset-0 bg-black/20 z-10 md:hidden no-print top-[calc(3.5rem+2.75rem)]"
+            className="fixed inset-0 bg-black/20 z-10 lg:hidden no-print top-[calc(3.5rem+2.75rem)]"
             onClick={() => setShowEditor(false)}
           ></div>
         )}

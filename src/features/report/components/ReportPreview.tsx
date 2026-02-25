@@ -79,7 +79,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
                   <tr className="bg-gray-100">
                     <td colSpan={5} className="font-bold text-[11px] px-3 py-2 border border-black text-gray-800">■ {groupName}</td>
                   </tr>
-                  {metrics.map((metric, idx) => <MetricRow key={`${groupName}-${idx}`} metric={metric} />)}
+                  {metrics.map((metric, idx) => <MetricRow key={`${groupName}-${idx}`} metric={metric} idx={idx} />)}
                 </React.Fragment>
               ))}
               {ungroupedMetrics.length > 0 && (
@@ -89,7 +89,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
                       <td colSpan={5} className="font-bold text-[11px] px-3 py-2 border border-black text-gray-800">■ {t('metrics.commonOther')}</td>
                     </tr>
                   )}
-                  {ungroupedMetrics.map((metric, idx) => <MetricRow key={`common-${idx}`} metric={metric} />)}
+                  {ungroupedMetrics.map((metric, idx) => <MetricRow key={`common-${idx}`} metric={metric} idx={idx} />)}
                 </>
               )}
             </>
@@ -439,11 +439,12 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                   )}
 
                   {isMultiLot(data.reportType) ? (
-                    <div className="space-y-8 mt-6">
+                    <div className="mt-4">
                       {data.lots.map((lot, idx) => (
-                        <div key={lot.id}>
-                          <div className="bg-gray-800 text-white text-[11px] font-bold px-3 py-2 mb-4 flex items-center gap-2">
-                            <span>■ {lot.name || `Lot ${idx + 1}`}</span>
+                        <div key={lot.id} className={idx > 0 ? 'mt-6 pt-5 border-t-2 border-gray-300' : ''}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-0.5 rounded">{idx + 1}</span>
+                            <span className="text-[12px] font-bold text-gray-800">{lot.name || `Lot ${idx + 1}`}</span>
                           </div>
                           <LotSection lot={lot} reportType={data.reportType} t={t} />
                         </div>
@@ -506,7 +507,7 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
   );
 };
 
-const MetricRow: React.FC<{ metric: ProductionMetric }> = ({ metric }) => {
+const MetricRow: React.FC<{ metric: ProductionMetric; idx?: number }> = ({ metric, idx = 0 }) => {
   const { min, max, actual } = metric;
   const isSet = min !== 0 || max !== 0;
   const isPass = isSet && actual >= min && actual <= max;
@@ -517,9 +518,11 @@ const MetricRow: React.FC<{ metric: ProductionMetric }> = ({ metric }) => {
     percentage = Math.max(0, Math.min(100, percentage));
   }
 
+  const rowBg = idx % 2 === 1 ? 'bg-gray-50/70' : '';
+
   return (
-    <tr>
-      <td className="font-semibold bg-gray-50/50 text-center text-[11px]">{metric.name}</td>
+    <tr className={rowBg}>
+      <td className="font-semibold text-center text-[11px]">{metric.name}</td>
       <td className="text-gray-600 text-center font-mono text-[11px]">
         {isSet ? `${min} ~ ${max} ${metric.unit}` : '-'}
       </td>

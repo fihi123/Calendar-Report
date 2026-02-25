@@ -83,6 +83,8 @@ export interface ReportData {
   date: string;
   language?: 'ko' | 'en';
   info: InfoItem[];
+  purpose: string;
+  showChart?: boolean;
   summary: string;
   decision?: string;
   lots: LotData[];

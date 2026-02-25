@@ -29,6 +29,8 @@ const initialData: ReportData = {
     { id: '4', label: '제품명', value: '하이드라 세럼' },
     { id: '5', label: '문서 ID', value: 'SRS-000001' },
   ],
+  purpose: '양산 적용 전 공정 조건 확인 및 품질 검증',
+  showChart: true,
   summary: '금일 시생산 결과 전반적인 물성 양호하며 목표 수율 달성함.',
   decision: '적합',
   lots: [
@@ -88,6 +90,7 @@ const ReportApp: React.FC = () => {
     setReportData(prev => ({
       ...prev,
       title: mapValue(prev.title),
+      purpose: mapValue(prev.purpose),
       summary: mapValue(prev.summary),
       issues: mapValue(prev.issues),
       info: prev.info.map(item => ({

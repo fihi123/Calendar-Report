@@ -423,13 +423,18 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                        })}
                     </tbody>
                   </table>
+                  {data.purpose && (
+                    <p className="mt-4 text-[13px] text-gray-700 leading-relaxed">
+                      <span className="font-bold text-gray-800">{t('section.purpose')} : </span>{data.purpose}
+                    </p>
+                  )}
                 </section>
 
                 <section className="mb-10">
                   <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.inspection')}</h2>
 
                   {/* Integrated Chart — all lots combined, at the top */}
-                  {data.lots.some(lot => lot.metrics.length > 0) && (
+                  {data.showChart !== false && data.lots.some(lot => lot.metrics.length > 0) && (
                     <ChartComponent lots={data.lots} t={t} />
                   )}
 

@@ -335,6 +335,10 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
               <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('editor.title')}</label>
               <input type="text" value={data.title} onChange={(e) => handleTextChange('title', e.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all outline-none" />
             </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('editor.purpose')}</label>
+              <textarea value={data.purpose} onChange={(e) => handleTextChange('purpose', e.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all outline-none resize-none" rows={2} placeholder={t('editor.purposePlaceholder')} />
+            </div>
             <div className="mt-4">
               <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('editor.detailItems')}</label>
               <div className="space-y-2">
@@ -377,7 +381,11 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
         <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
             <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">{t('editor.metrics')}</h3>
-            <div className="flex gap-2 relative">
+            <div className="flex gap-2 items-center relative">
+               <label className="flex items-center gap-1.5 text-[10px] text-gray-500 cursor-pointer select-none mr-1">
+                 <input type="checkbox" checked={data.showChart !== false} onChange={(e) => onChange({ ...data, showChart: e.target.checked })} className="w-3.5 h-3.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer" />
+                 {t('chart.showInReport')}
+               </label>
                <div ref={templateMenuRef} className="relative">
                  <button onClick={() => setShowTemplateMenu(!showTemplateMenu)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-1.5 rounded-md transition-colors border border-gray-300 flex items-center gap-1" title={t('editor.templateDownload')}><Download size={16} /><ChevronDown size={12} /></button>
                  {showTemplateMenu && (

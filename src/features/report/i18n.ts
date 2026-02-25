@@ -81,6 +81,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'editor.lotName': '호수명',
     'editor.basicInfo': '기본 정보',
     'editor.title': '보고서 제목',
+    'editor.purpose': '시생산 목적',
+    'editor.purposePlaceholder': '시생산 목적을 입력하세요...',
+    'section.purpose': '목적',
     'editor.detailItems': '상세 항목 (목록 편집 가능)',
     'editor.itemName': '항목명',
     'editor.content': '내용',
@@ -139,6 +142,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'default.position.manager': '책임',
     'default.position.senior': '수석',
     'default.position.teamLead': '팀장',
+    'default.purpose': '양산 적용 전 공정 조건 확인 및 품질 검증',
     'default.summary': '금일 시생산 결과 전반적인 물성 양호하며 목표 수율 달성함.',
     'default.issues': '- 포장 라인 초기 세팅 시간 지연 (15분)\n- 2호기 노즐 압력 미세 조정 완료',
     'default.metric.fillWeight': '충진 중량',
@@ -169,6 +173,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'editor.batchSizeNotSet': '수율 섹션에서 지시량을 입력하면 자동 계산됩니다.',
     'chart.compliance': '달성률 (%)',
     'chart.rawValue': '원본 값',
+    'chart.showInReport': '차트 포함',
   },
   en: {
     // Cover
@@ -250,6 +255,10 @@ const translations: Record<Lang, Record<string, string>> = {
     'editor.lotName': 'Lot Name',
     'editor.basicInfo': 'Basic Info',
     'editor.title': 'Report Title',
+    'editor.purpose': 'Production Purpose',
+    'editor.purposePlaceholder': 'Enter pilot production purpose...',
+    'section.purpose': 'Purpose',
+
     'editor.detailItems': 'Detail Items (editable list)',
     'editor.itemName': 'Field Name',
     'editor.content': 'Content',
@@ -308,6 +317,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'default.position.manager': 'Manager',
     'default.position.senior': 'Senior',
     'default.position.teamLead': 'Team Lead',
+    'default.purpose': 'Verify process conditions and quality before mass production',
     'default.summary': 'Overall physical properties satisfactory; target yield achieved in today\'s pilot production.',
     'default.issues': '- Packaging line initial setup delayed (15 min)\n- Nozzle pressure fine-tuning completed on Machine #2',
     'default.metric.fillWeight': 'Fill Weight',
@@ -338,6 +348,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'editor.batchSizeNotSet': 'Enter batch size in Yield section for auto-calculation.',
     'chart.compliance': 'Compliance (%)',
     'chart.rawValue': 'Raw Values',
+    'chart.showInReport': 'Include Chart',
   },
 };
 
@@ -358,6 +369,7 @@ const translatableDefaultKeys = [
   'default.position.manager',
   'default.position.senior',
   'default.position.teamLead',
+  'default.purpose',
   'default.summary',
   'default.issues',
   'default.metric.fillWeight',

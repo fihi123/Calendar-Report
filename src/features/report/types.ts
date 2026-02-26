@@ -41,8 +41,9 @@ export type ReportType =
 export interface ColorMaterial {
   code: string;
   name: string;
-  amount: number;
-  percentage: number;
+  finalContent: number;
+  formulation100: number;
+  prescriptionContent: number;
 }
 
 export interface ColorMatchingData {

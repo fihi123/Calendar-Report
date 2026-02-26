@@ -104,11 +104,12 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
           <table className="report-table table-fixed">
             <thead>
               <tr>
-                <th className="w-[15%]">{t('editor.colorMatching')}</th>
-                <th className="w-[20%]">{t('editor.materialCode')}</th>
-                <th className="w-[30%]">{t('editor.materialName')}</th>
-                <th className="w-[17%]">{t('editor.amount')}</th>
-                <th className="w-[18%]">{t('editor.percentage')}</th>
+                <th className="w-[12%]">{t('editor.colorMatching')}</th>
+                <th className="w-[15%]">{t('editor.materialCode')}</th>
+                <th className="w-[25%]">{t('editor.materialName')}</th>
+                <th className="w-[16%]">{t('editor.finalContent')}</th>
+                <th className="w-[16%]">{t('editor.formulation100')}</th>
+                <th className="w-[16%]">{t('editor.prescriptionContent')}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,8 +123,9 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
                     )}
                     <td className="border border-black px-3 py-1.5 text-xs font-mono">{mat.code}</td>
                     <td className="border border-black px-3 py-1.5 text-xs">{mat.name}</td>
-                    <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{mat.amount}</td>
-                    <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{mat.percentage}%</td>
+                    <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{mat.finalContent}</td>
+                    <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{mat.formulation100}</td>
+                    <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{mat.prescriptionContent}</td>
                   </tr>
                 ));
               })}

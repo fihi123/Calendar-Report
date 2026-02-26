@@ -21,6 +21,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
   const fullTemplateMenuRef = useRef<HTMLDivElement>(null);
 
   const t = getTranslator(data.language || 'ko');
+  const selectOnFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select();
   const activeLot = data.lots[activeLotIndex] || data.lots[0];
   const yieldMode = getYieldMode(data.reportType);
 
@@ -112,7 +113,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
   const addColorMaterial = (phase: 'aqueous' | 'oil') => {
     updateActiveLot(lot => {
       const cm = getColorMatching(lot);
-      return { ...lot, colorMatching: { ...cm, [phase]: [...cm[phase], { code: '', name: '', amount: 0, percentage: 0 }] } };
+      return { ...lot, colorMatching: { ...cm, [phase]: [...cm[phase], { code: '', name: '', finalContent: 0, formulation100: 0, prescriptionContent: 0 }] } };
     });
   };
   const removeColorMaterial = (phase: 'aqueous' | 'oil', index: number) => {
@@ -125,13 +126,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
     updateActiveLot(lot => {
       const cm = getColorMatching(lot);
       const list = [...cm[phase]];
-      const item = { ...list[index], [field]: value };
-      const batchG = getBatchSizeInGrams(lot);
-      if (batchG > 0) {
-        if (field === 'amount') item.percentage = Math.round((Number(value) / batchG) * 100 * 10000) / 10000;
-        else if (field === 'percentage') item.amount = Math.round(batchG * (Number(value) / 100) * 100) / 100;
-      }
-      list[index] = item;
+      list[index] = { ...list[index], [field]: value };
       return { ...lot, colorMatching: { ...cm, [phase]: list } };
     });
   };
@@ -411,9 +406,9 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
             {activeLot.metrics.map((metric, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-1 items-center bg-gray-50 p-1.5 rounded-lg border border-transparent hover:border-gray-200 hover:bg-white transition-all group">
                 <div className="col-span-4"><input type="text" value={metric.name} onChange={(e) => handleMetricChange(idx, 'name', e.target.value)} className="w-full p-1 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none font-medium" placeholder="Name" /></div>
-                <div className="col-span-2"><input type="number" value={metric.min} onChange={(e) => handleMetricChange(idx, 'min', Number(e.target.value))} className="w-full p-1 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center" /></div>
-                <div className="col-span-2"><input type="number" value={metric.max} onChange={(e) => handleMetricChange(idx, 'max', Number(e.target.value))} className="w-full p-1 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center" /></div>
-                <div className="col-span-2"><input type="number" value={metric.actual} onChange={(e) => handleMetricChange(idx, 'actual', Number(e.target.value))} className="w-full p-1 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none font-bold text-center text-brand-700" /></div>
+                <div className="col-span-2"><input type="number" value={metric.min} onFocus={selectOnFocus} onChange={(e) => handleMetricChange(idx, 'min', Number(e.target.value))} className="w-full p-1 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center" /></div>
+                <div className="col-span-2"><input type="number" value={metric.max} onFocus={selectOnFocus} onChange={(e) => handleMetricChange(idx, 'max', Number(e.target.value))} className="w-full p-1 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center" /></div>
+                <div className="col-span-2"><input type="number" value={metric.actual} onFocus={selectOnFocus} onChange={(e) => handleMetricChange(idx, 'actual', Number(e.target.value))} className="w-full p-1 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none font-bold text-center text-brand-700" /></div>
                 <div className="col-span-2 flex items-center">
                   <input type="text" value={metric.unit} onChange={(e) => handleMetricChange(idx, 'unit', e.target.value)} className="w-full p-1 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center text-gray-400" />
                   <button onClick={() => removeMetric(idx)} className="ml-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12} /></button>
@@ -428,17 +423,6 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
         {yieldMode === 'manufacturing' && (
           <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
             <SectionTitle title={t('editor.colorMatching')} icon={<Palette size={16} />} />
-            {getBatchSizeInGrams(activeLot) > 0 ? (
-              <div className="mb-3 px-2 py-1.5 bg-green-50 border border-green-200 rounded-md flex items-center gap-2 text-[10px] text-green-700">
-                <Calculator size={10} />
-                <span className="font-semibold">{t('editor.batchSizeRef')}: {(activeLot.yield.planned || 0).toLocaleString()}{activeLot.yield.unit} ({getBatchSizeInGrams(activeLot).toLocaleString()}g)</span>
-              </div>
-            ) : (
-              <div className="mb-3 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-md flex items-center gap-2 text-[10px] text-gray-400">
-                <AlertCircle size={10} />
-                <span>{t('editor.batchSizeNotSet')}</span>
-              </div>
-            )}
             <div className="space-y-4">
               {(['aqueous', 'oil'] as const).map((phase) => {
                 const items = getColorMatching(activeLot)[phase];
@@ -448,15 +432,16 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
                 return (
                   <div key={phase} className={`${bgColor} border rounded-lg p-3 space-y-2`}>
                     <span className={`text-xs font-bold ${accentColor}`}>{t(`editor.${phase}`)}</span>
-                    <div className="grid grid-cols-12 gap-1 text-[10px] text-gray-400 font-bold uppercase tracking-wider text-center px-1">
-                      <span className="col-span-3 text-left">{t('editor.materialCode')}</span><span className="col-span-3 text-left">{t('editor.materialName')}</span><span className="col-span-3">{t('editor.amount')}</span><span className="col-span-2">{t('editor.percentage')}</span><span className="col-span-1"></span>
+                    <div className="grid grid-cols-12 gap-1 text-[10px] text-gray-400 font-bold tracking-wider text-center px-1">
+                      <span className="col-span-2 text-left">{t('editor.materialCode')}</span><span className="col-span-3 text-left">{t('editor.materialName')}</span><span className="col-span-2">{t('editor.finalContent')}</span><span className="col-span-2">{t('editor.formulation100')}</span><span className="col-span-2">{t('editor.prescriptionContent')}</span><span className="col-span-1"></span>
                     </div>
                     {items.map((mat, idx) => (
                       <div key={idx} className="grid grid-cols-12 gap-1 items-center group">
-                        <div className="col-span-3"><input type="text" value={mat.code} onChange={(e) => handleColorMaterialChange(phase, idx, 'code', e.target.value)} className="w-full p-1.5 text-xs bg-white border border-gray-200 rounded focus:border-brand-500 outline-none font-mono" placeholder={t('editor.materialCode')} /></div>
+                        <div className="col-span-2"><input type="text" value={mat.code} onChange={(e) => handleColorMaterialChange(phase, idx, 'code', e.target.value)} className="w-full p-1.5 text-xs bg-white border border-gray-200 rounded focus:border-brand-500 outline-none font-mono" placeholder={t('editor.materialCode')} /></div>
                         <div className="col-span-3"><input type="text" value={mat.name} onChange={(e) => handleColorMaterialChange(phase, idx, 'name', e.target.value)} className="w-full p-1.5 text-xs bg-white border border-gray-200 rounded focus:border-brand-500 outline-none" placeholder={t('editor.materialName')} /></div>
-                        <div className="col-span-3"><input type="number" value={mat.amount} onChange={(e) => handleColorMaterialChange(phase, idx, 'amount', Number(e.target.value))} className="w-full p-1.5 text-xs bg-white border border-gray-200 rounded focus:border-brand-500 outline-none text-center" step="0.01" /></div>
-                        <div className="col-span-2"><input type="number" value={mat.percentage} onChange={(e) => handleColorMaterialChange(phase, idx, 'percentage', Number(e.target.value))} className="w-full p-1.5 text-xs bg-white border border-gray-200 rounded focus:border-brand-500 outline-none text-center" step="0.01" /></div>
+                        <div className="col-span-2"><input type="number" value={mat.finalContent} onFocus={selectOnFocus} onChange={(e) => handleColorMaterialChange(phase, idx, 'finalContent', Number(e.target.value))} className="w-full p-1.5 text-xs bg-white border border-gray-200 rounded focus:border-brand-500 outline-none text-center" step="0.0001" /></div>
+                        <div className="col-span-2"><input type="number" value={mat.formulation100} onFocus={selectOnFocus} onChange={(e) => handleColorMaterialChange(phase, idx, 'formulation100', Number(e.target.value))} className="w-full p-1.5 text-xs bg-white border border-gray-200 rounded focus:border-brand-500 outline-none text-center" step="0.0001" /></div>
+                        <div className="col-span-2"><input type="number" value={mat.prescriptionContent} onFocus={selectOnFocus} onChange={(e) => handleColorMaterialChange(phase, idx, 'prescriptionContent', Number(e.target.value))} className="w-full p-1.5 text-xs bg-white border border-gray-200 rounded focus:border-brand-500 outline-none text-center" step="0.0001" /></div>
                         <div className="col-span-1 flex justify-center"><button onClick={() => removeColorMaterial(phase, idx)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12} /></button></div>
                       </div>
                     ))}
@@ -498,8 +483,8 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
                   </div>
                   <div className="col-span-2"><input type="text" value={entry.code} onChange={(e) => handleCorrectionChange(idx, 'code', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none font-mono" placeholder={t('editor.materialCode')} /></div>
                   <div className="col-span-2"><input type="text" value={entry.name} onChange={(e) => handleCorrectionChange(idx, 'name', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none" placeholder={t('editor.materialName')} /></div>
-                  <div className="col-span-1"><input type="number" value={entry.amount} onChange={(e) => handleCorrectionChange(idx, 'amount', Number(e.target.value))} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center" step="0.01" /></div>
-                  <div className="col-span-1"><input type="number" value={entry.percentage} onChange={(e) => handleCorrectionChange(idx, 'percentage', Number(e.target.value))} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center" step="0.01" /></div>
+                  <div className="col-span-1"><input type="number" value={entry.amount} onFocus={selectOnFocus} onChange={(e) => handleCorrectionChange(idx, 'amount', Number(e.target.value))} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center" step="0.01" /></div>
+                  <div className="col-span-1"><input type="number" value={entry.percentage} onFocus={selectOnFocus} onChange={(e) => handleCorrectionChange(idx, 'percentage', Number(e.target.value))} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none text-center" step="0.01" /></div>
                   <div className="col-span-3"><input type="text" value={entry.memo} onChange={(e) => handleCorrectionChange(idx, 'memo', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-brand-500 outline-none" placeholder={t('editor.memo')} /></div>
                   <div className="col-span-1 flex justify-center"><button onClick={() => removeCorrection(idx)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12} /></button></div>
                 </div>
@@ -517,12 +502,12 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
                <div className="flex items-end gap-3">
                   <div className="flex-1">
                     <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">{t('yield.planned')}</label>
-                    <input type="number" value={activeLot.yield.planned || 0} onChange={(e) => updateActiveLot(lot => ({ ...lot, yield: { ...lot.yield, planned: Number(e.target.value) } }))} className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-brand-500 transition-colors" />
+                    <input type="number" value={activeLot.yield.planned || 0} onFocus={selectOnFocus} onChange={(e) => updateActiveLot(lot => ({ ...lot, yield: { ...lot.yield, planned: Number(e.target.value) } }))} className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-brand-500 transition-colors" />
                   </div>
                   <div className="pb-3 text-gray-400"><ChevronRight size={16} /></div>
                   <div className="flex-1">
                     <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">{t('yield.obtained')}</label>
-                    <input type="number" value={activeLot.yield.obtained || 0} onChange={(e) => updateActiveLot(lot => ({ ...lot, yield: { ...lot.yield, obtained: Number(e.target.value) } }))} className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-brand-500 transition-colors" />
+                    <input type="number" value={activeLot.yield.obtained || 0} onFocus={selectOnFocus} onChange={(e) => updateActiveLot(lot => ({ ...lot, yield: { ...lot.yield, obtained: Number(e.target.value) } }))} className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-brand-500 transition-colors" />
                   </div>
                   <div className="w-16">
                      <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">Unit</label>
@@ -532,7 +517,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
                <div className="bg-indigo-50/50 p-2 rounded-lg border border-indigo-100 flex items-center gap-3">
                   <div className="flex-1">
                     <label className="text-[10px] font-bold text-indigo-400 mb-1 block uppercase flex items-center gap-1"><FlaskIcon /> {t('yield.samples')}</label>
-                    <input type="number" value={activeLot.yield.samples || 0} onChange={(e) => updateActiveLot(lot => ({ ...lot, yield: { ...lot.yield, samples: Number(e.target.value) } }))} className="w-full p-2 bg-white border border-indigo-200 rounded text-sm outline-none focus:border-indigo-500 transition-colors" />
+                    <input type="number" value={activeLot.yield.samples || 0} onFocus={selectOnFocus} onChange={(e) => updateActiveLot(lot => ({ ...lot, yield: { ...lot.yield, samples: Number(e.target.value) } }))} className="w-full p-2 bg-white border border-indigo-200 rounded text-sm outline-none focus:border-indigo-500 transition-colors" />
                   </div>
                   <div className="text-[10px] text-gray-400 pt-5">{t('editor.samplesNote').split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br/>}</span>)}</div>
                </div>
@@ -542,22 +527,22 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
                <div className="flex gap-3">
                   <div className="flex-1">
                     <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">{t('yield.usedBulk')}</label>
-                    <div className="relative"><input type="number" value={activeLot.yield.used_bulk || 0} onChange={(e) => handlePackagingChange('used_bulk', Number(e.target.value))} className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-brand-500 transition-colors pl-8" /><span className="absolute left-3 top-2.5 text-gray-400 text-xs">kg</span></div>
+                    <div className="relative"><input type="number" value={activeLot.yield.used_bulk || 0} onFocus={selectOnFocus} onChange={(e) => handlePackagingChange('used_bulk', Number(e.target.value))} className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-brand-500 transition-colors pl-8" /><span className="absolute left-3 top-2.5 text-gray-400 text-xs">kg</span></div>
                   </div>
                   <div className="flex-1">
                     <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">{t('yield.unitWeight')}</label>
-                    <div className="relative"><input type="number" value={activeLot.yield.unit_weight || 0} onChange={(e) => handlePackagingChange('unit_weight', Number(e.target.value))} className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-brand-500 transition-colors pl-8" /><span className="absolute left-3 top-2.5 text-gray-400 text-xs">g</span></div>
+                    <div className="relative"><input type="number" value={activeLot.yield.unit_weight || 0} onFocus={selectOnFocus} onChange={(e) => handlePackagingChange('unit_weight', Number(e.target.value))} className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm outline-none focus:border-brand-500 transition-colors pl-8" /><span className="absolute left-3 top-2.5 text-gray-400 text-xs">g</span></div>
                   </div>
                </div>
                <div className="flex items-center gap-2 text-[10px] text-gray-400"><Calculator size={10} /><span>{t('yield.theoreticalQty')} = (Bulk * 1000) / Unit Weight</span></div>
                <div className="flex gap-3">
                   <div className="flex-1">
                     <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">{t('yield.theoreticalQty')}</label>
-                    <div className="relative"><input type="number" value={activeLot.yield.theoretical_qty || 0} onChange={(e) => handlePackagingChange('theoretical_qty', Number(e.target.value))} className="w-full p-2 bg-indigo-50 border border-indigo-200 rounded text-sm outline-none focus:border-brand-500 transition-colors pl-8" /><span className="absolute left-3 top-2.5 text-gray-400 text-xs">ea</span></div>
+                    <div className="relative"><input type="number" value={activeLot.yield.theoretical_qty || 0} onFocus={selectOnFocus} onChange={(e) => handlePackagingChange('theoretical_qty', Number(e.target.value))} className="w-full p-2 bg-indigo-50 border border-indigo-200 rounded text-sm outline-none focus:border-brand-500 transition-colors pl-8" /><span className="absolute left-3 top-2.5 text-gray-400 text-xs">ea</span></div>
                   </div>
                   <div className="flex-1">
                     <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase">{t('yield.actualQty')}</label>
-                    <div className="relative"><input type="number" value={activeLot.yield.actual_qty || 0} onChange={(e) => handlePackagingChange('actual_qty', Number(e.target.value))} className="w-full p-2 bg-white border border-gray-300 ring-1 ring-gray-100 rounded text-sm outline-none focus:border-brand-500 transition-colors pl-8 font-bold text-brand-700" /><span className="absolute left-3 top-2.5 text-gray-400 text-xs">ea</span></div>
+                    <div className="relative"><input type="number" value={activeLot.yield.actual_qty || 0} onFocus={selectOnFocus} onChange={(e) => handlePackagingChange('actual_qty', Number(e.target.value))} className="w-full p-2 bg-white border border-gray-300 ring-1 ring-gray-100 rounded text-sm outline-none focus:border-brand-500 transition-colors pl-8 font-bold text-brand-700" /><span className="absolute left-3 top-2.5 text-gray-400 text-xs">ea</span></div>
                   </div>
                </div>
                {lossData && (

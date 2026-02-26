@@ -23,7 +23,8 @@ import {
   Package,
   Settings,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  Trash2
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Modal } from '../../components/Modal';
@@ -109,6 +110,7 @@ const CalendarApp: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
 
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventMember, setNewEventMember] = useState(teamMembers[0]?.id ?? '');
   const [newEventType, setNewEventType] = useState<EventType>('manufacturing');
@@ -146,10 +148,31 @@ const CalendarApp: React.FC = () => {
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
+    setEditingEvent(null);
+    setNewEventTitle('');
     setNewEventStart(format(date, "yyyy-MM-dd'T'09:00"));
     setNewEventEnd(format(date, "yyyy-MM-dd'T'17:00"));
     setNewEventType('manufacturing');
+    setNewEventMember(teamMembers[0]?.id ?? '');
     setIsEventModalOpen(true);
+  };
+
+  const handleEditEvent = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingEvent(event);
+    setNewEventTitle(event.title);
+    setNewEventStart(format(event.start, "yyyy-MM-dd'T'HH:mm"));
+    setNewEventEnd(format(event.end, "yyyy-MM-dd'T'HH:mm"));
+    setNewEventType(event.type);
+    setNewEventMember(event.memberId);
+    setIsEventModalOpen(true);
+  };
+
+  const handleDeleteEvent = () => {
+    if (!editingEvent) return;
+    setEvents(prev => prev.filter(ev => ev.id !== editingEvent.id));
+    setIsEventModalOpen(false);
+    setEditingEvent(null);
   };
 
   const navigateToReport = (event: CalendarEvent) => {
@@ -178,9 +201,7 @@ const CalendarApp: React.FC = () => {
 
   const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (event.type === 'manufacturing' || event.type === 'packaging') {
-      navigateToReport(event);
-    }
+    handleEditEvent(event, e);
   };
 
   const addEvent = (event: CalendarEvent) => {
@@ -191,17 +212,25 @@ const CalendarApp: React.FC = () => {
     e.preventDefault();
     if (!newEventTitle || !newEventStart || !newEventEnd) return;
 
-    const newEvent: CalendarEvent = {
-      id: uuidv4(),
-      title: newEventTitle,
-      start: new Date(newEventStart),
-      end: new Date(newEventEnd),
-      memberId: newEventMember,
-      type: newEventType
-    };
+    if (editingEvent) {
+      setEvents(prev => prev.map(ev =>
+        ev.id === editingEvent.id
+          ? { ...ev, title: newEventTitle, start: new Date(newEventStart), end: new Date(newEventEnd), memberId: newEventMember, type: newEventType }
+          : ev
+      ));
+    } else {
+      addEvent({
+        id: uuidv4(),
+        title: newEventTitle,
+        start: new Date(newEventStart),
+        end: new Date(newEventEnd),
+        memberId: newEventMember,
+        type: newEventType
+      });
+    }
 
-    addEvent(newEvent);
     setIsEventModalOpen(false);
+    setEditingEvent(null);
     setNewEventTitle('');
   };
 
@@ -409,11 +438,11 @@ const CalendarApp: React.FC = () => {
         </div>
       </div>
 
-      {/* Manual Add Event Modal */}
+      {/* Add / Edit Event Modal */}
       <Modal
         isOpen={isEventModalOpen}
-        onClose={() => setIsEventModalOpen(false)}
-        title="Add New Event"
+        onClose={() => { setIsEventModalOpen(false); setEditingEvent(null); }}
+        title={editingEvent ? '일정 수정' : '새 일정 추가'}
       >
         <form onSubmit={handleManualSubmit} className="space-y-4">
             <div>
@@ -485,9 +514,32 @@ const CalendarApp: React.FC = () => {
                     ))}
                 </div>
             </div>
-            <div className="flex justify-end pt-4 gap-2">
-                <Button variant="secondary" onClick={() => setIsEventModalOpen(false)} type="button">Cancel</Button>
-                <Button type="submit">Save Event</Button>
+            <div className="flex items-center pt-4 gap-2">
+                {editingEvent && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleDeleteEvent}
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-md transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      삭제
+                    </button>
+                    {(editingEvent.type === 'manufacturing' || editingEvent.type === 'packaging') && (
+                      <button
+                        type="button"
+                        onClick={() => { setIsEventModalOpen(false); setEditingEvent(null); navigateToReport(editingEvent); }}
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 border border-primary-200 rounded-md transition-colors"
+                      >
+                        <FileText className="w-4 h-4" />
+                        보고서
+                      </button>
+                    )}
+                  </>
+                )}
+                <div className="flex-1" />
+                <Button variant="secondary" onClick={() => { setIsEventModalOpen(false); setEditingEvent(null); }} type="button">취소</Button>
+                <Button type="submit">{editingEvent ? '수정' : '저장'}</Button>
             </div>
         </form>
       </Modal>

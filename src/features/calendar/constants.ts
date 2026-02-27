@@ -70,23 +70,12 @@ export const TEAM_MEMBERS: TeamMember[] = [
   },
 ];
 
-export const INITIAL_EVENTS = [
-  {
-    id: 'init-1',
-    title: 'Batch A-101 Mixing',
-    description: 'Initial mixing process for product A.',
-    start: new Date(new Date().setHours(8, 0, 0, 0)),
-    end: new Date(new Date().setHours(16, 0, 0, 0)),
-    memberId: '1',
-    type: 'manufacturing' as const
-  },
-  {
-    id: 'init-2',
-    title: 'Line 2 Packaging',
-    description: 'Final boxing and labeling for Batch A-100.',
-    start: new Date(new Date().setDate(new Date().getDate() + 1)),
-    end: new Date(new Date().setDate(new Date().getDate() + 1)),
-    memberId: '4',
-    type: 'packaging' as const
-  }
-];
+export const INITIAL_EVENTS: {
+  id: string;
+  title: string;
+  description: string;
+  start: Date;
+  end: Date;
+  memberId: string;
+  type: 'manufacturing' | 'packaging';
+}[] = [];

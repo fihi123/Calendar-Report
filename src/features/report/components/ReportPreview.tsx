@@ -58,8 +58,10 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
   const hasGroups = Object.keys(groupedMetrics).length > 0;
 
   return (
-    <>
-      <table className="report-table mb-6 table-fixed">
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-[13px] font-bold border-l-4 border-blue-500 pl-3 mb-3 text-gray-800">{t('editor.metrics')}</h3>
+        <table className="report-table table-fixed">
         <thead>
           <tr>
             <th className="w-[20%]">{t('table.item')}</th>
@@ -96,10 +98,11 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
           )}
         </tbody>
       </table>
+      </div>
 
       {/* Color Matching Log - manufacturing only */}
       {reportType.endsWith('-manufacturing') && lot.colorMatching && (lot.colorMatching.aqueous.length > 0 || lot.colorMatching.oil.length > 0) && (
-        <div className="mb-6 mt-6">
+        <div>
           <h3 className="text-[13px] font-bold border-l-4 border-amber-500 pl-3 mb-3 text-gray-800">{t('section.colorMatching')}</h3>
           <table className="report-table table-fixed">
             <thead>
@@ -121,11 +124,11 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
                     {idx === 0 && (
                       <td rowSpan={items.length} className="text-center font-bold text-[11px] border border-black align-middle bg-gray-50">{t(`editor.${phase}`)}</td>
                     )}
-                    <td className="border border-black px-3 py-1.5 text-xs font-mono">{mat.code}</td>
-                    <td className="border border-black px-3 py-1.5 text-xs">{mat.name}</td>
-                    <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{mat.finalContent}</td>
-                    <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{mat.formulation100}</td>
-                    <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{mat.prescriptionContent}</td>
+                    <td className="border border-black px-3 py-1.5 text-[11px] font-mono">{mat.code}</td>
+                    <td className="border border-black px-3 py-1.5 text-[11px]">{mat.name}</td>
+                    <td className="border border-black px-3 py-1.5 text-[11px] text-right font-mono">{mat.finalContent}</td>
+                    <td className="border border-black px-3 py-1.5 text-[11px] text-right font-mono">{mat.formulation100}</td>
+                    <td className="border border-black px-3 py-1.5 text-[11px] text-right font-mono">{mat.prescriptionContent}</td>
                   </tr>
                 ));
               })}
@@ -136,7 +139,7 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
 
       {/* Corrections Log - manufacturing only */}
       {reportType.endsWith('-manufacturing') && (lot.corrections || []).length > 0 && (
-        <div className="mb-6 mt-6">
+        <div>
           <h3 className="text-[13px] font-bold border-l-4 border-teal-500 pl-3 mb-3 text-gray-800">{t('section.corrections')}</h3>
           <table className="report-table table-fixed">
             <thead>
@@ -152,12 +155,12 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
             <tbody>
               {lot.corrections!.map((entry) => (
                 <tr key={entry.id}>
-                  <td className="border border-black px-3 py-1.5 text-xs font-semibold text-center">{entry.type}</td>
-                  <td className="border border-black px-3 py-1.5 text-xs font-mono">{entry.code}</td>
-                  <td className="border border-black px-3 py-1.5 text-xs">{entry.name}</td>
-                  <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{entry.amount}</td>
-                  <td className="border border-black px-3 py-1.5 text-xs text-right font-mono">{entry.percentage}%</td>
-                  <td className="border border-black px-3 py-1.5 text-xs text-gray-600">{entry.memo}</td>
+                  <td className="border border-black px-3 py-1.5 text-[11px] font-semibold text-center">{entry.type}</td>
+                  <td className="border border-black px-3 py-1.5 text-[11px] font-mono">{entry.code}</td>
+                  <td className="border border-black px-3 py-1.5 text-[11px]">{entry.name}</td>
+                  <td className="border border-black px-3 py-1.5 text-[11px] text-right font-mono">{entry.amount}</td>
+                  <td className="border border-black px-3 py-1.5 text-[11px] text-right font-mono">{entry.percentage}%</td>
+                  <td className="border border-black px-3 py-1.5 text-[11px] text-gray-600">{entry.memo}</td>
                 </tr>
               ))}
             </tbody>
@@ -165,7 +168,9 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
         </div>
       )}
 
-      <div className="border border-black p-5 mb-6 mt-6 bg-gray-50 shadow-sm print-break-inside-avoid">
+      <div>
+        <h3 className="text-[13px] font-bold border-l-4 border-indigo-500 pl-3 mb-3 text-gray-800">{t('editor.yield')}</h3>
+        <div className="border border-black p-5 bg-gray-50 shadow-sm print-break-inside-avoid">
         {yieldMode === 'packaging' ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between px-2 text-center">
@@ -205,24 +210,24 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
           <div className="flex items-center justify-between px-2">
             <div className="text-center flex-1">
               <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">{t('yield.planned')}</div>
-              <div className="text-lg font-mono font-bold">{(lot.yield.planned || 0).toLocaleString()} <span className="text-xs font-normal text-gray-500">{lot.yield.unit}</span></div>
+              <div className="text-lg font-mono font-bold">{(lot.yield.planned || 0).toLocaleString()} <span className="text-[10px] font-normal text-gray-500">{lot.yield.unit}</span></div>
             </div>
             <div className="text-gray-300 text-2xl font-light">/</div>
             <div className="flex-[2] flex flex-col items-center bg-gray-50 rounded-lg py-1 px-4 mx-2 border border-gray-100">
               <div className="flex items-end gap-2 mb-1">
                 <div className="text-center">
                   <span className="text-lg font-mono font-bold text-gray-800">{(lot.yield.obtained || 0).toLocaleString()}</span>
-                  <span className="text-[9px] text-gray-500 block uppercase">{t('yield.obtained')}</span>
+                  <span className="text-[10px] text-gray-500 block uppercase">{t('yield.obtained')}</span>
                 </div>
                 <div className="text-gray-400 pb-2">+</div>
                 <div className="text-center">
                   <span className="text-lg font-mono font-bold text-indigo-600">{(lot.yield.samples || 0).toLocaleString()}</span>
-                  <span className="text-[9px] text-indigo-400 block uppercase">{t('yield.samples')}</span>
+                  <span className="text-[10px] text-indigo-400 block uppercase">{t('yield.samples')}</span>
                 </div>
               </div>
               <div className="border-t border-gray-300 w-full"></div>
               <div className="text-[10px] font-bold text-gray-600 mt-1 uppercase tracking-wider">
-                {t('yield.total')}: <span className="font-mono text-sm">{((lot.yield.obtained || 0) + (lot.yield.samples || 0)).toLocaleString()}</span> <span className="text-[9px] font-normal">{lot.yield.unit}</span>
+                {t('yield.total')}: <span className="font-mono text-sm">{((lot.yield.obtained || 0) + (lot.yield.samples || 0)).toLocaleString()}</span> <span className="text-[10px] font-normal">{lot.yield.unit}</span>
               </div>
             </div>
             <div className="h-10 w-px bg-gray-300 mx-2"></div>
@@ -232,8 +237,9 @@ const LotSection: React.FC<{ lot: LotData; reportType: ReportData['reportType'];
             </div>
           </div>
         )}
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 
@@ -297,20 +303,20 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                {data.title || '시생산 결과 보고서'}
              </h1>
              <div className="text-sm text-gray-500 mt-2">
-               {t(`cover.subtitle.${data.reportType}`)}
+               {data.info.find(i => i.label.includes('제목'))?.value || t(`cover.subtitle.${data.reportType}`)}
              </div>
              <div className="h-1 w-24 bg-brand-600 mx-auto mt-8 mb-12"></div>
              <div className="w-full max-w-md mx-auto bg-gray-50 border-y border-gray-200 py-6 px-8">
                 <table className="w-full text-left">
                   <tbody>
-                    {data.info
-                      .filter(item => ['부서', '작성자', '제품명', 'Department', 'Author', 'Product'].some(k => item.label.includes(k)))
-                      .map(item => (
-                        <tr key={item.id}>
-                          <th className="py-3 text-sm font-bold text-gray-500 w-28 align-top">{item.label}</th>
-                          <td className="py-3 text-lg font-medium">{item.value}</td>
-                        </tr>
-                      ))}
+                    <tr>
+                      <th className="py-3 text-sm font-bold text-gray-500 w-28 align-top">{t('cover.department')}</th>
+                      <td className="py-3 text-lg font-medium">{data.approvals.drafter.department}</td>
+                    </tr>
+                    <tr>
+                      <th className="py-3 text-sm font-bold text-gray-500 w-28 align-top">{t('cover.author')}</th>
+                      <td className="py-3 text-lg font-medium">{data.approvals.drafter.name}</td>
+                    </tr>
                     <tr>
                       <th className="py-3 text-sm font-bold text-gray-500 w-28 align-top">{t('cover.date')}</th>
                       <td className="py-3 text-lg font-medium">{currentDate}</td>
@@ -328,32 +334,50 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
           <table className="w-full border-collapse border border-black">
             <thead>
               <tr>
-                 <th className="border border-black bg-gray-100 py-3 text-center w-1/3 text-sm">{t('cover.drafter')}</th>
-                 <th className="border border-black bg-gray-100 py-3 text-center w-1/3 text-sm">{t('cover.reviewer')}</th>
-                 <th className="border border-black bg-gray-100 py-3 text-center w-1/3 text-sm">{t('cover.approver')}</th>
+                 <th className="border border-black bg-gray-100 py-2 text-center w-1/3 text-sm">{t('cover.drafter')}</th>
+                 <th className="border border-black bg-gray-100 py-2 text-center w-1/3 text-sm">{t('cover.reviewer')}</th>
+                 <th className="border border-black bg-gray-100 py-2 text-center w-1/3 text-sm">{t('cover.approver')}</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                {(['drafter', 'reviewer', 'approver'] as const).map(role => (
-                  <td key={role} className="border border-black bg-gray-50 text-center align-middle py-1 text-[10px] text-gray-500 font-medium">
-                    {data.approvals[role].department}
-                  </td>
-                ))}
+                {(['drafter', 'reviewer', 'approver'] as const).map(role => {
+                  const isSkipped = role === 'reviewer' && data.skipReviewer;
+                  return (
+                    <td key={role} className="border border-black bg-gray-50 text-center align-middle py-2 text-[10px] text-gray-500 font-medium">
+                      {!isSkipped && data.approvals[role].department}
+                    </td>
+                  );
+                })}
               </tr>
               <tr>
-                {(['drafter', 'reviewer', 'approver'] as const).map(role => (
-                  <td key={role} className="border border-black bg-gray-50 text-center align-middle py-1 text-[10px] text-gray-500">
-                    {data.approvals[role].position}
-                  </td>
-                ))}
+                {(['drafter', 'reviewer', 'approver'] as const).map(role => {
+                  const isSkipped = role === 'reviewer' && data.skipReviewer;
+                  return (
+                    <td key={role} className="border border-black bg-gray-50 text-center align-middle py-2 text-[10px] text-gray-500">
+                      {!isSkipped && data.approvals[role].position}
+                    </td>
+                  );
+                })}
               </tr>
               <tr className="h-16">
                 {(['drafter', 'reviewer', 'approver'] as const).map(role => {
                   const entry = data.approvals[role];
+                  const isSkipped = role === 'reviewer' && data.skipReviewer;
                   return (
-                    <td key={role} className="border border-black text-center align-middle relative px-2">
-                      {(entry.name || entry.signature) && (
+                    <td
+                      key={role}
+                      ref={isSkipped ? (el: HTMLTableCellElement | null) => {
+                        if (el) {
+                          const { width, height } = el.getBoundingClientRect();
+                          if (width > 0 && height > 0) {
+                            el.style.setProperty('--diagonal-angle', `${Math.atan2(height, width) * (180 / Math.PI)}deg`);
+                          }
+                        }
+                      } : undefined}
+                      className={`border border-black text-center align-middle ${isSkipped ? 'cell-diagonal' : 'relative px-2'}`}
+                    >
+                      {!isSkipped && (entry.name || entry.signature) && (
                         <div className="flex items-center justify-center gap-2">
                           <span className="font-serif text-lg text-gray-800">{entry.name}</span>
                           {entry.signature && (
@@ -366,11 +390,14 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                 })}
               </tr>
               <tr>
-                {(['drafter', 'reviewer', 'approver'] as const).map(role => (
-                  <td key={role} className="border border-black bg-gray-50 text-center align-middle py-1 text-[10px] text-gray-500">
-                    {data.approvals[role].date || ''}
-                  </td>
-                ))}
+                {(['drafter', 'reviewer', 'approver'] as const).map(role => {
+                  const isSkipped = role === 'reviewer' && data.skipReviewer;
+                  return (
+                    <td key={role} className="border border-black bg-gray-50 text-center align-middle py-2 text-[10px] text-gray-500">
+                      {!isSkipped && (data.approvals[role].date || '')}
+                    </td>
+                  );
+                })}
               </tr>
             </tbody>
           </table>
@@ -383,15 +410,8 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
           <thead>
             <tr>
               <td>
-                <div className="flex justify-between items-end border-b-2 border-gray-800 pb-3 mb-8">
-                  <div>
-                    <h2 className="text-xl font-bold font-serif text-gray-900">{data.title} {t('detail.suffix')}</h2>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">{t('detail.subtitle')}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs font-bold text-gray-600">{displayDept}</div>
-                    <div className="text-[10px] text-gray-400">{currentDate}</div>
-                  </div>
+                <div className="border-b-2 border-gray-800 pb-3 mb-8">
+                  <h2 className="text-xl font-bold font-serif text-gray-900">{data.title || '시생산 결과 보고서'}</h2>
                 </div>
               </td>
             </tr>
@@ -408,40 +428,29 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
           <tbody>
             <tr>
               <td>
-                <section className="mb-10">
-                  <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.overview')}</h2>
-                  <table className="report-table">
-                    <colgroup><col className="w-[15%]" /><col className="w-[35%]" /><col className="w-[15%]" /><col className="w-[35%]" /></colgroup>
-                    <tbody>
-                      {Array.from({ length: Math.ceil(data.info.length / 2) }).map((_, rowIndex) => {
-                         const item1 = data.info[rowIndex * 2];
-                         const item2 = data.info[rowIndex * 2 + 1];
-                         return (
-                           <tr key={rowIndex}>
-                             <th>{item1.label}</th><td>{item1.value}</td>
-                             <th>{item2 ? item2.label : ''}</th><td>{item2 ? item2.value : ''}</td>
-                           </tr>
-                         );
-                       })}
-                    </tbody>
-                  </table>
-                  {data.purpose && (
-                    <p className="mt-4 text-[13px] text-gray-700 leading-relaxed">
-                      <span className="font-bold text-gray-800">{t('section.purpose')} : </span>{data.purpose}
-                    </p>
-                  )}
+                <section className="mb-8">
+                  <h2 className="text-[13px] font-bold border-l-4 border-slate-700 pl-3 mb-3 uppercase tracking-tight">{t('section.overview')}</h2>
+                  <div className="space-y-1 text-[13px] text-gray-800 leading-relaxed pl-6">
+                    {data.info.map(item => (
+                      <p key={item.id}>
+                        <span className="font-bold text-gray-600">{item.label}</span> : {item.value}
+                      </p>
+                    ))}
+                  </div>
                 </section>
 
-                <section className="mb-10">
-                  <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.inspection')}</h2>
+                <section className="mb-8">
+                  <h2 className="text-[13px] font-bold border-l-4 border-blue-500 pl-3 mb-3 uppercase tracking-tight">{t('section.inspection')}</h2>
 
                   {/* Integrated Chart — all lots combined, at the top */}
                   {data.showChart !== false && data.lots.some(lot => lot.metrics.length > 0) && (
-                    <ChartComponent lots={data.lots} t={t} />
+                    <div className="mb-6">
+                      <ChartComponent lots={data.lots} t={t} />
+                    </div>
                   )}
 
                   {isMultiLot(data.reportType) ? (
-                    <div className="mt-4">
+                    <div>
                       {data.lots.map((lot, idx) => (
                         <div key={lot.id} className={idx > 0 ? 'mt-6 pt-5 border-t-2 border-gray-300' : ''}>
                           <div className="flex items-center gap-2 mb-3">
@@ -457,19 +466,19 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                   )}
                 </section>
 
-                <section className="mb-10 print-break-inside-avoid">
-                  <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.summary')}</h2>
-                  <div className="grid grid-cols-1 gap-0 border border-black divide-y divide-black">
-                    <div className="p-4 bg-white min-h-[90px]">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-[12px] font-bold text-gray-900 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 bg-gray-900 rounded-full"></span> {t('summary.executive')}
-                        </h3>
-                        {getDecisionBadge(data.decision)}
-                      </div>
+                <section className="mb-8 print-break-inside-avoid">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-[13px] font-bold border-l-4 border-emerald-500 pl-3 uppercase tracking-tight">{t('section.summary')}</h2>
+                    {getDecisionBadge(data.decision)}
+                  </div>
+                  <div className="space-y-4">
+                    <div className="border border-black p-4 bg-white min-h-[90px]">
+                      <h3 className="text-[12px] font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-gray-900 rounded-full"></span> {t('summary.executive')}
+                      </h3>
                       <p className="whitespace-pre-wrap leading-[1.8] text-[11px] text-gray-700 pl-3.5">{data.summary || t('summary.noContent')}</p>
                     </div>
-                    <div className="p-4 bg-white min-h-[90px]">
+                    <div className="border border-black p-4 bg-white min-h-[90px]">
                       <h3 className="text-[12px] font-bold text-red-700 mb-3 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-red-700 rounded-full"></span> {t('summary.issues')}
                       </h3>
@@ -478,8 +487,8 @@ const ReportPreview: React.FC<Props> = ({ data }) => {
                   </div>
                 </section>
 
-                <section className="mb-10 print-break-inside-avoid">
-                  <h2 className="text-[13px] font-bold border-l-4 border-gray-800 pl-3 mb-4 uppercase tracking-tight">{t('section.photos')}</h2>
+                <section className="mb-8 print-break-inside-avoid">
+                  <h2 className="text-[13px] font-bold border-l-4 border-purple-500 pl-3 mb-3 uppercase tracking-tight">{t('section.photos')}</h2>
                   {data.images.length === 0 ? (
                     <div className="border border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center text-gray-400 bg-gray-50">
                       <span className="text-xs">{t('photos.none')}</span>

@@ -94,6 +94,7 @@ export interface ReportData {
     reviewer: ApprovalEntry;
     approver: ApprovalEntry;
   };
+  skipReviewer?: boolean;
   issues: string;
   conclusion: string;
   images: string[];

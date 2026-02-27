@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Diagonal strike line for skipped approval cells */
+.cell-diagonal {
+  position: relative;
+  overflow: hidden;
+}
+.cell-diagonal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150%;
+  height: 0;
+  border-top: 1px solid black;
+  transform-origin: top right;
+  transform: rotate(calc(-1 * var(--diagonal-angle, 18deg)));
+  pointer-events: none;
+}
+
 @media print {
   .no-print { display: none !important; }
   .print-break-inside-avoid { break-inside: avoid; }

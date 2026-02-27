@@ -5,8 +5,7 @@ import { db } from '../../lib/firebase';
 import ReportPreview from './components/ReportPreview';
 import EditorPanel from './components/EditorPanel';
 import { ReportData, ReportType } from './types';
-import { Printer, Save, FileUp, Menu, X, FileDown, Table, RotateCcw, Languages } from 'lucide-react';
-import { exportToPdf, exportToExcel } from './utils/exportUtils';
+import { Printer, Save, FileUp, Menu, X, RotateCcw, Languages } from 'lucide-react';
 import { buildDefaultValueMap, type Lang } from './i18n';
 
 interface CalendarLinkState {
@@ -15,6 +14,8 @@ interface CalendarLinkState {
   title: string;
   type: 'manufacturing' | 'packaging';
   mode?: 'write' | 'view';
+  memberName?: string;
+  memberRole?: string;
 }
 
 const initialData: ReportData = {
@@ -23,47 +24,43 @@ const initialData: ReportData = {
   language: 'ko',
   date: new Date().toISOString().split('T')[0],
   info: [
-    { id: '1', label: '부서', value: '공정개발팀' },
-    { id: '2', label: '작성자', value: '김철수 책임' },
-    { id: '3', label: 'LOT No.', value: '2025-BATCH-001' },
-    { id: '4', label: '제품명', value: '하이드라 세럼' },
-    { id: '5', label: '문서 ID', value: 'SRS-000001' },
+    { id: '1', label: '제목', value: '' },
+    { id: '2', label: '목적', value: '' },
+    { id: '3', label: '참석자', value: '' },
+    { id: '4', label: '설비 정보', value: '' },
+    { id: '5', label: '벌크', value: '' },
+    { id: '6', label: '부자재', value: '' },
   ],
-  purpose: '양산 적용 전 공정 조건 확인 및 품질 검증',
+  purpose: '',
   showChart: true,
-  summary: '금일 시생산 결과 전반적인 물성 양호하며 목표 수율 달성함.',
+  summary: '',
   decision: '적합',
   lots: [
     {
       id: '1',
-      name: 'Default',
-      metrics: [
-        { name: '충진 중량', min: 14.5, max: 15.5, actual: 15.1, unit: 'g' },
-        { name: '캡 토크', min: 5.0, max: 8.0, actual: 6.5, unit: 'kgf' },
-        { name: 'pH', min: 4.5, max: 6.5, actual: 5.2, unit: '' },
-        { name: '점도', min: 3000, max: 5000, actual: 4120, unit: 'cps' },
-      ],
+      name: '',
+      metrics: [],
       yield: {
         mode: 'manufacturing',
-        planned: 1000,
-        obtained: 975,
-        samples: 15,
+        planned: 0,
+        obtained: 0,
+        samples: 0,
         unit: 'kg',
-        used_bulk: 100,
-        unit_weight: 50,
-        theoretical_qty: 2000,
-        actual_qty: 1985,
+        used_bulk: 0,
+        unit_weight: 0,
+        theoretical_qty: 0,
+        actual_qty: 0,
       },
       colorMatching: { aqueous: [], oil: [] },
       corrections: [],
     },
   ],
   approvals: {
-    drafter: { department: '공정개발팀', position: '책임', name: '김철수', date: new Date().toISOString().split('T')[0] },
-    reviewer: { department: '공정개발팀', position: '수석', name: '이영희', date: '' },
-    approver: { department: '공정개발팀', position: '팀장', name: '박부장', date: '' },
+    drafter: { department: '', position: '', name: '', date: '' },
+    reviewer: { department: '', position: '', name: '', date: '' },
+    approver: { department: '공정개발팀', position: '본부장', name: '신병모', date: '' },
   },
-  issues: '- 포장 라인 초기 세팅 시간 지연 (15분)\n- 2호기 노즐 압력 미세 조정 완료',
+  issues: '',
   conclusion: '',
   images: [],
 };
@@ -73,7 +70,6 @@ const ReportApp: React.FC = () => {
   const navigate = useNavigate();
   const [reportData, setReportData] = useState<ReportData>(initialData);
   const [showEditor, setShowEditor] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
   const [linkedEventId, setLinkedEventId] = useState<string | null>(null);
   const prevLangRef = useRef<Lang>(reportData.language || 'ko');
 
@@ -151,9 +147,20 @@ const ReportApp: React.FC = () => {
           ...prev,
           date: state.date,
           reportType,
-          info: prev.info.map(item =>
-            (item.label.includes('제품명') || item.label.includes('Product')) ? { ...item, value: state.title } : item
-          ),
+          info: prev.info.map(item => {
+            if (item.label.includes('제목')) return { ...item, value: state.title };
+            return item;
+          }),
+          approvals: {
+            ...prev.approvals,
+            drafter: {
+              ...prev.approvals.drafter,
+              department: '공정개발팀',
+              name: state.memberName || prev.approvals.drafter.name,
+              position: state.memberRole || prev.approvals.drafter.position,
+              date: state.date,
+            },
+          },
         }));
         window.history.replaceState({}, document.title);
       })();
@@ -165,9 +172,22 @@ const ReportApp: React.FC = () => {
       ...prev,
       date: state.date,
       reportType,
-      info: prev.info.map(item =>
-        (item.label.includes('제품명') || item.label.includes('Product')) ? { ...item, value: state.title } : item
-      ),
+      info: prev.info.map(item => {
+        if (item.label.includes('제품명') || item.label.includes('Product')) return { ...item, value: state.title };
+        if (item.label.includes('작성자') || item.label.includes('Author')) return { ...item, value: state.memberName ? `${state.memberName} ${state.memberRole || ''}`.trim() : item.value };
+        if (item.label.includes('부서') || item.label.includes('Department')) return { ...item, value: '공정개발팀' };
+        return item;
+      }),
+      approvals: {
+        ...prev.approvals,
+        drafter: {
+          ...prev.approvals.drafter,
+          department: '공정개발팀',
+          name: state.memberName || prev.approvals.drafter.name,
+          position: state.memberRole || prev.approvals.drafter.position,
+          date: state.date,
+        },
+      },
     }));
 
     window.history.replaceState({}, document.title);
@@ -220,32 +240,7 @@ const ReportApp: React.FC = () => {
     navigate('/calendar');
   }, [reportData, linkedEventId, navigate]);
 
-  const handleExportPdf = useCallback(async () => {
-    setIsExporting(true);
-    try {
-      const department = reportData.info.find(i => i.label.includes('부서') || i.label.includes('Department'))?.value || '';
-      const dateStr = new Date(reportData.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-      await exportToPdf(`report_${reportData.date}.pdf`, {
-        title: reportData.title,
-        department,
-        date: dateStr,
-      });
-    } catch (err) {
-      console.error('PDF export failed:', err);
-      alert('PDF 내보내기에 실패했습니다.');
-    } finally {
-      setIsExporting(false);
-    }
-  }, [reportData]);
 
-  const handleExportExcel = useCallback(() => {
-    try {
-      exportToExcel(reportData);
-    } catch (err) {
-      console.error('Excel export failed:', err);
-      alert('엑셀 내보내기에 실패했습니다.');
-    }
-  }, [reportData]);
 
   const handleReset = useCallback(() => {
     if (confirm('보고서를 초기화하시겠습니까? 현재 작성된 내용이 모두 삭제됩니다.')) {
@@ -365,23 +360,6 @@ const ReportApp: React.FC = () => {
           <div className="h-5 w-px bg-gray-200 mx-0.5"></div>
           <button onClick={() => setShowEditor(!showEditor)} className="flex items-center gap-1.5 text-gray-500 hover:text-brand-700 hover:bg-gray-100 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium" title="Toggle Editor (Ctrl+E)">
             {showEditor ? <><X size={14} /> Close</> : <><Menu size={14} /> Editor</>}
-          </button>
-          <button
-            onClick={handleExportPdf}
-            disabled={isExporting}
-            className="flex items-center gap-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium"
-            title="PDF로 저장"
-          >
-            <FileDown size={14} />
-            <span className="hidden sm:inline">{isExporting ? '변환 중...' : 'PDF 저장'}</span>
-          </button>
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium"
-            title="엑셀로 다운로드"
-          >
-            <Table size={14} />
-            <span className="hidden sm:inline">엑셀</span>
           </button>
           <button onClick={handlePrint} className="flex items-center gap-1.5 bg-brand-700 text-white hover:bg-brand-800 px-3 py-1.5 rounded-md transition-all text-xs font-bold shadow-sm" title="Print to PDF (Ctrl+P)">
             <Printer size={14} />

@@ -162,7 +162,7 @@ const ChartComponent: React.FC<Props> = ({ lots, t }) => {
   if (metricNames.length === 0) return null;
 
   return (
-    <div className="w-full mt-3 mb-2 border border-black p-4 bg-white print-break-inside-avoid">
+    <div className="w-full border border-black p-4 bg-white print-break-inside-avoid">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
           <span className="w-2 h-2 bg-brand-700 rounded-full"></span>

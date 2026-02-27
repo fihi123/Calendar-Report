@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ReportData, ProductionMetric, ReportType, LotData, ColorMatchingData, CorrectionEntry, isMultiLot, getYieldMode } from '../types';
-import { Sparkles, Plus, Trash2, BarChart2, FileSpreadsheet, Upload, ChevronRight, Download, ChevronDown, Package, Factory, Calculator, AlertCircle, CheckCircle, XCircle, AlertTriangle, Clock, Palette, Wrench } from 'lucide-react';
+import { Sparkles, Plus, Trash2, BarChart2, Upload, ChevronRight, Download, ChevronDown, Package, Factory, Calculator, AlertCircle, CheckCircle, XCircle, AlertTriangle, Clock, Palette, Wrench } from 'lucide-react';
 import { analyzeData } from '../services/geminiService';
-import { parseExcelMetrics, parseExcelToLots, downloadTemplate, downloadFullTemplate } from '../utils/excelParser';
+import { parseExcelToLots, downloadFullTemplate } from '../utils/excelParser';
 import SignaturePad from './SignaturePad';
 import { getTranslator } from '../i18n';
 
@@ -13,11 +13,9 @@ interface Props {
 
 const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
-  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
   const [showFullTemplateMenu, setShowFullTemplateMenu] = useState(false);
   const [activeLotIndex, setActiveLotIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const templateMenuRef = useRef<HTMLDivElement>(null);
   const fullTemplateMenuRef = useRef<HTMLDivElement>(null);
 
   const t = getTranslator(data.language || 'ko');
@@ -34,7 +32,6 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (templateMenuRef.current && !templateMenuRef.current.contains(event.target as Node)) setShowTemplateMenu(false);
       if (fullTemplateMenuRef.current && !fullTemplateMenuRef.current.contains(event.target as Node)) setShowFullTemplateMenu(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -161,22 +158,6 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
     t('editor.correctionTypes.other'),
   ];
 
-  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const metrics = await parseExcelMetrics(file);
-        if (metrics.length > 0) {
-          if (confirm(t('editor.overwriteConfirm'))) {
-            updateActiveLot(lot => ({ ...lot, metrics }));
-          } else {
-            updateActiveLot(lot => ({ ...lot, metrics: [...lot.metrics, ...metrics] }));
-          }
-        } else { alert(t('editor.parseError')); }
-      } catch (err) { console.error(err); alert(t('editor.excelError')); }
-      e.target.value = '';
-    }
-  };
 
   const handleFullExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -240,8 +221,8 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
   };
   const lossData = calculateLoss();
 
-  const SectionTitle = ({ title, icon }: { title: string; icon?: React.ReactNode }) => (
-    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
+  const SectionTitle = ({ title, icon, barColor = 'border-gray-800' }: { title: string; icon?: React.ReactNode; barColor?: string }) => (
+    <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 border-l-4 pl-3 ${barColor}`}>
       {icon && <span className="text-brand-600">{icon}</span>}
       <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">{title}</h3>
     </div>
@@ -257,7 +238,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
 
         {/* Report Type Selector */}
         <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <SectionTitle title={t('editor.reportType')} />
+          <SectionTitle title={t('editor.reportType')} barColor="border-brand-600" />
           <div className="grid grid-cols-2 gap-2">
             {([
               { type: 'single-manufacturing' as ReportType, label: t('editor.singleMfg'), desc: t('editor.singleMfgDesc'), icon: Factory },
@@ -303,7 +284,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
         {/* Lot Tabs */}
         {isMultiLot(data.reportType) && (
           <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <SectionTitle title={t('editor.lotManagement')} />
+            <SectionTitle title={t('editor.lotManagement')} barColor="border-gray-600" />
             <div className="flex flex-wrap gap-2 items-center">
               {data.lots.map((lot, idx) => (
                 <div key={lot.id} className="flex items-center gap-1">
@@ -324,15 +305,11 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
 
         {/* Basic Info */}
         <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-          <SectionTitle title={t('editor.basicInfo')} />
+          <SectionTitle title={t('editor.basicInfo')} barColor="border-slate-700" />
           <div className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('editor.title')}</label>
               <input type="text" value={data.title} onChange={(e) => handleTextChange('title', e.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all outline-none" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('editor.purpose')}</label>
-              <textarea value={data.purpose} onChange={(e) => handleTextChange('purpose', e.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all outline-none resize-none" rows={2} placeholder={t('editor.purposePlaceholder')} />
             </div>
             <div className="mt-4">
               <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('editor.detailItems')}</label>
@@ -354,17 +331,26 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
                {(['drafter', 'reviewer', 'approver'] as const).map((role) => {
                  const label = t(`editor.${role}`);
                  const entry = data.approvals[role];
+                 const isSkipped = role === 'reviewer' && data.skipReviewer;
                  const updateField = (field: string, value: string) => {
                    onChange({ ...data, approvals: { ...data.approvals, [role]: { ...entry, [field]: value } } });
                  };
                  return (
-                   <div key={role} className="space-y-1.5 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                     <div className="text-[10px] font-bold text-gray-400 uppercase text-center">{label}</div>
-                     <input type="text" placeholder={t('editor.dept')} value={entry.department} onChange={(e) => updateField('department', e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none" />
-                     <input type="text" placeholder={t('editor.position')} value={entry.position} onChange={(e) => updateField('position', e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none" />
-                     <input type="text" placeholder={t('editor.name')} value={entry.name} onChange={(e) => updateField('name', e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none font-medium" />
-                     <SignaturePad value={entry.signature || ''} onChange={(v) => updateField('signature', v)} />
-                     <input type="date" value={entry.date} onChange={(e) => updateField('date', e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none text-gray-500" />
+                   <div key={role} className={`space-y-1.5 p-2 rounded-lg border ${isSkipped ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-gray-50 border-gray-100'}`}>
+                     <div className="text-[10px] font-bold text-gray-400 uppercase text-center flex items-center justify-center gap-1.5">
+                       {label}
+                       {role === 'reviewer' && (
+                         <label className="flex items-center gap-1 cursor-pointer normal-case tracking-normal">
+                           <input type="checkbox" checked={!!data.skipReviewer} onChange={(e) => onChange({ ...data, skipReviewer: e.target.checked })} className="w-3 h-3 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer" />
+                           <span className="text-[9px] text-gray-400 font-medium">생략</span>
+                         </label>
+                       )}
+                     </div>
+                     <input type="text" placeholder={t('editor.dept')} value={entry.department} onChange={(e) => updateField('department', e.target.value)} disabled={isSkipped} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed" />
+                     <input type="text" placeholder={t('editor.position')} value={entry.position} onChange={(e) => updateField('position', e.target.value)} disabled={isSkipped} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed" />
+                     <input type="text" placeholder={t('editor.name')} value={entry.name} onChange={(e) => updateField('name', e.target.value)} disabled={isSkipped} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none font-medium disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed" />
+                     {!isSkipped && <SignaturePad value={entry.signature || ''} onChange={(v) => updateField('signature', v)} />}
+                     <input type="date" value={entry.date} onChange={(e) => updateField('date', e.target.value)} disabled={isSkipped} className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-xs text-center focus:border-brand-500 outline-none text-gray-500 disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed" />
                    </div>
                  );
                })}
@@ -374,27 +360,12 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
 
         {/* Metrics */}
         <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+          <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 border-l-4 border-blue-500 pl-3">
             <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">{t('editor.metrics')}</h3>
             <div className="flex gap-2 items-center relative">
                <label className="flex items-center gap-1.5 text-[10px] text-gray-500 cursor-pointer select-none mr-1">
                  <input type="checkbox" checked={data.showChart !== false} onChange={(e) => onChange({ ...data, showChart: e.target.checked })} className="w-3.5 h-3.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer" />
                  {t('chart.showInReport')}
-               </label>
-               <div ref={templateMenuRef} className="relative">
-                 <button onClick={() => setShowTemplateMenu(!showTemplateMenu)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-1.5 rounded-md transition-colors border border-gray-300 flex items-center gap-1" title={t('editor.templateDownload')}><Download size={16} /><ChevronDown size={12} /></button>
-                 {showTemplateMenu && (
-                   <div className="absolute top-full right-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
-                     <button onClick={() => { downloadTemplate('raw'); setShowTemplateMenu(false); }} className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 flex flex-col"><span className="font-bold text-gray-800">{t('editor.rawTemplate')}</span><span className="text-gray-500 text-[10px]">{t('editor.rawTemplateDesc')}</span></button>
-                     <button onClick={() => { downloadTemplate('multi_sheet'); setShowTemplateMenu(false); }} className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 flex flex-col border-t border-gray-100"><span className="font-bold text-gray-800">{t('editor.multiSheetTemplate')}</span><span className="text-gray-500 text-[10px]">{t('editor.multiSheetTemplateDesc')}</span></button>
-                     <button onClick={() => { downloadTemplate('summary'); setShowTemplateMenu(false); }} className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 flex flex-col border-t border-gray-100"><span className="font-bold text-gray-800">{t('editor.summaryTemplate')}</span><span className="text-gray-500 text-[10px]">{t('editor.summaryTemplateDesc')}</span></button>
-                   </div>
-                 )}
-               </div>
-               <label className="cursor-pointer group relative">
-                 <div className="bg-green-50 hover:bg-green-100 text-green-700 p-1.5 rounded-md transition-colors border border-green-200"><FileSpreadsheet size={16} /></div>
-                 <span className="absolute bottom-full right-0 mb-2 w-max px-2 py-1 text-[10px] text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity">{t('editor.excelUpload')}</span>
-                 <input type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={handleExcelUpload} />
                </label>
                <button onClick={handleAIAnalyze} disabled={!!isGenerating} className="bg-purple-50 hover:bg-purple-100 text-purple-700 p-1.5 rounded-md transition-colors border border-purple-200" title="AI Analysis"><BarChart2 size={16} /></button>
             </div>
@@ -422,7 +393,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
         {/* Color Matching - manufacturing only */}
         {yieldMode === 'manufacturing' && (
           <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-            <SectionTitle title={t('editor.colorMatching')} icon={<Palette size={16} />} />
+            <SectionTitle title={t('editor.colorMatching')} icon={<Palette size={16} />} barColor="border-amber-500" />
             <div className="space-y-4">
               {(['aqueous', 'oil'] as const).map((phase) => {
                 const items = getColorMatching(activeLot)[phase];
@@ -456,7 +427,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
         {/* Corrections - manufacturing only */}
         {yieldMode === 'manufacturing' && (
           <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-            <SectionTitle title={t('editor.corrections')} icon={<Wrench size={16} />} />
+            <SectionTitle title={t('editor.corrections')} icon={<Wrench size={16} />} barColor="border-teal-500" />
             {getBatchSizeInGrams(activeLot) > 0 ? (
               <div className="mb-3 px-2 py-1.5 bg-green-50 border border-green-200 rounded-md flex items-center gap-2 text-[10px] text-green-700">
                 <Calculator size={10} />
@@ -496,7 +467,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
 
         {/* Yield */}
         <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-           <SectionTitle title={t('editor.yield')} />
+           <SectionTitle title={t('editor.yield')} barColor="border-indigo-500" />
            {yieldMode === 'manufacturing' ? (
              <div className="space-y-4">
                <div className="flex items-end gap-3">
@@ -560,7 +531,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
 
         {/* Photos */}
         <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 border-l-4 border-purple-500 pl-3">
              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">{t('editor.photos')} ({data.images.length})</h3>
              <label className="cursor-pointer bg-brand-50 hover:bg-brand-100 text-brand-700 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-colors border border-brand-200"><Upload size={12} />{t('editor.addPhoto')}<input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" /></label>
           </div>
@@ -600,7 +571,7 @@ const EditorPanel: React.FC<Props> = ({ data, onChange }) => {
 
         {/* Summary & Decision */}
         <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow group">
-           <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+           <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 border-l-4 border-emerald-500 pl-3">
              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">{t('editor.result')}</h3>
            </div>
            <div className="mb-4">

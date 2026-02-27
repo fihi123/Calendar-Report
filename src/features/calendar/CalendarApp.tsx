@@ -144,6 +144,7 @@ const CalendarApp: React.FC = () => {
   };
 
   const navigateToReport = (event: CalendarEvent) => {
+    const member = teamMembers.find(m => m.id === event.memberId);
     navigate('/report', {
       state: {
         eventId: event.id,
@@ -151,11 +152,14 @@ const CalendarApp: React.FC = () => {
         title: event.title,
         type: event.type,
         mode: 'write',
+        memberName: member?.name || '',
+        memberRole: member?.role || '',
       },
     });
   };
 
   const viewReport = (event: CalendarEvent) => {
+    const member = teamMembers.find(m => m.id === event.memberId);
     navigate('/report', {
       state: {
         eventId: event.id,
@@ -163,6 +167,8 @@ const CalendarApp: React.FC = () => {
         title: event.title,
         type: event.type,
         mode: 'view',
+        memberName: member?.name || '',
+        memberRole: member?.role || '',
       },
     });
   };

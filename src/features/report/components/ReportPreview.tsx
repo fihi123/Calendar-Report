@@ -532,7 +532,7 @@ const MetricRow: React.FC<{ metric: ProductionMetric; idx?: number }> = ({ metri
         {isSet ? `${min} ~ ${max} ${metric.unit}` : '-'}
       </td>
       <td className="font-bold text-center text-[11px]">{actual}</td>
-      <td className="align-middle px-3">
+      <td className="align-middle">
         {isSet ? (
           <div className="relative h-[18px]">
             {/* Track background */}
@@ -561,7 +561,7 @@ const MetricRow: React.FC<{ metric: ProductionMetric; idx?: number }> = ({ metri
             />
           </div>
         ) : (
-          <div className="h-[16px] bg-gray-50 rounded-full border border-gray-200" />
+          <div className="h-[18px] bg-gray-50 rounded-full border border-gray-200" />
         )}
       </td>
       <td className={`font-bold text-center text-[11px] ${isPass ? 'text-green-700 bg-green-50' : (isSet ? 'text-red-600 bg-red-50' : 'text-gray-400')}`}>

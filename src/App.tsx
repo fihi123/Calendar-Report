@@ -1,12 +1,12 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { Calendar, FileText } from 'lucide-react';
 import CalendarApp from './features/calendar/CalendarApp';
 import ReportApp from './features/report/ReportApp';
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="h-screen flex flex-col overflow-hidden">
         {/* Top Navigation */}
         <nav className="h-14 bg-slate-900 text-white flex items-center px-6 gap-6 flex-shrink-0 z-50 no-print">
@@ -59,7 +59,7 @@ const App: React.FC = () => {
           </Routes>
         </div>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 

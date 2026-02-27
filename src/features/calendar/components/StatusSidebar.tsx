@@ -8,7 +8,6 @@ import {
   Package,
   ChevronRight,
   XCircle,
-  AlertTriangle,
   Search,
 } from 'lucide-react';
 import { CalendarEvent, TeamMember } from '../types';
@@ -159,26 +158,21 @@ const StatusSidebar: React.FC<StatusSidebarProps> = ({
     return (
       <button
         onClick={() => onNavigateToReport(event)}
-        className="w-full text-left group rounded-lg border border-amber-200 bg-amber-50/50 p-3 hover:bg-amber-50 hover:border-amber-300 hover:shadow-sm transition-all"
+        className="w-full group flex flex-row items-center justify-between gap-2 py-2 px-3 rounded-md border border-amber-200 bg-amber-50/30 hover:bg-amber-50 hover:border-amber-300 transition-all"
       >
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2 min-w-0">
           <TypeBadge type={event.type} />
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary-600 transition-colors" />
+          <span className="text-sm font-semibold text-slate-900 truncate">{event.title}</span>
         </div>
-        <p className="text-sm font-semibold text-slate-900 truncate">{event.title}</p>
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-1.5">
-            {member && (
-              <>
-                <img src={member.avatar} alt="" className="w-4 h-4 rounded-full" />
-                <span className="text-[11px] text-slate-600">{member.name.split(' ')[0]}</span>
-              </>
-            )}
-          </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {member && (
+            <div className="flex items-center gap-1">
+              <img src={member.avatar} alt="" className="w-4 h-4 rounded-full" />
+              <span className="text-[11px] text-slate-500">{member.name}</span>
+            </div>
+          )}
           <span className="text-[10px] text-slate-400">{format(new Date(event.start), 'M/d')}</span>
-        </div>
-        <div className="mt-2 text-[10px] text-primary-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-          보고서 작성 →
+          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-primary-600 transition-colors" />
         </div>
       </button>
     );
@@ -192,43 +186,26 @@ const StatusSidebar: React.FC<StatusSidebarProps> = ({
     return (
       <button
         onClick={() => onViewReport(event)}
-        className={`w-full text-left group rounded-lg border p-3 hover:shadow-sm transition-all cursor-pointer ${
+        className={`w-full group flex flex-row items-center justify-between gap-2 py-2 px-3 rounded-md border transition-all cursor-pointer ${
           isFail
-            ? 'border-rose-200 bg-rose-50/50 hover:bg-rose-50 hover:border-rose-300'
-            : 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 hover:border-emerald-300'
+            ? 'border-rose-200 bg-rose-50/30 hover:bg-rose-50 hover:border-rose-300'
+            : 'border-emerald-200 bg-emerald-50/30 hover:bg-emerald-50 hover:border-emerald-300'
         }`}
       >
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2 min-w-0">
           <TypeBadge type={event.type} />
-          <div className="flex items-center gap-1.5">
-            <QualityBadge record={record} />
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary-600 transition-colors" />
-          </div>
+          <span className="text-sm font-semibold text-slate-700 truncate">{event.title}</span>
+          <QualityBadge record={record} />
         </div>
-        <p className="text-sm font-semibold text-slate-700 truncate">{event.title}</p>
-
-        {isFail && record?.issues && (
-          <div className="flex items-start gap-1.5 mt-1.5 p-1.5 rounded bg-rose-100/70 border border-rose-200">
-            <AlertTriangle className="w-3 h-3 text-rose-500 mt-0.5 flex-shrink-0" />
-            <span className="text-[10px] text-rose-700 leading-relaxed line-clamp-2">{record.issues}</span>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-1.5">
-            {member && (
-              <>
-                <img src={member.avatar} alt="" className="w-4 h-4 rounded-full" />
-                <span className="text-[11px] text-slate-500">{member.name.split(' ')[0]}</span>
-              </>
-            )}
-          </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {member && (
+            <div className="flex items-center gap-1">
+              <img src={member.avatar} alt="" className="w-4 h-4 rounded-full" />
+              <span className="text-[11px] text-slate-500">{member.name}</span>
+            </div>
+          )}
           <span className="text-[10px] text-slate-400">{format(new Date(event.start), 'M/d')}</span>
-        </div>
-        <div className={`mt-2 text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity ${
-          isFail ? 'text-rose-600' : 'text-emerald-700'
-        }`}>
-          보고서 조회 →
+          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-primary-600 transition-colors" />
         </div>
       </button>
     );
@@ -333,7 +310,7 @@ const StatusSidebar: React.FC<StatusSidebarProps> = ({
                 </span>
               </div>
             )}
-            <div className="space-y-2">
+            <div className="space-y-1">
               {visibleTodo.map(event => (
                 <TodoCard key={event.id} event={event} />
               ))}
@@ -358,7 +335,7 @@ const StatusSidebar: React.FC<StatusSidebarProps> = ({
                 </span>
               </div>
             )}
-            <div className="space-y-2">
+            <div className="space-y-1">
               {visibleDone.map(event => (
                 <DoneCard key={event.id} event={event} />
               ))}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   format,
@@ -41,23 +41,6 @@ export interface CompletionRecord {
   issues: string;
 }
 
-// Migrate: force-reset localStorage team members if they contain old dummy data
-const TEAM_MEMBERS_KEY = 'teamsync-team-members';
-(() => {
-  try {
-    const stored = localStorage.getItem(TEAM_MEMBERS_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const hasOldData = Array.isArray(parsed) && parsed.some(
-        (m: any) => /^[A-Za-z]/.test(m.name) // old English names like "Sarah Kim"
-      );
-      if (hasOldData) {
-        localStorage.setItem(TEAM_MEMBERS_KEY, JSON.stringify(TEAM_MEMBERS));
-      }
-    }
-  } catch { /* ignore */ }
-})();
-
 // Serialize CalendarEvent dates to ISO strings for Firestore storage
 const serializeEvents = (events: CalendarEvent[]) =>
   events.map(e => ({ ...e, start: e.start instanceof Date ? e.start.toISOString() : e.start, end: e.end instanceof Date ? e.end.toISOString() : e.end }));
@@ -74,6 +57,14 @@ const CalendarApp: React.FC = () => {
     'team-members', 'members', TEAM_MEMBERS, 'teamsync-team-members',
   );
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+
+  // Force-reset old English dummy data in both localStorage AND Firestore
+  useEffect(() => {
+    const hasOldData = teamMembers.some(m => /^[A-Za-z]/.test(m.name));
+    if (hasOldData) {
+      setTeamMembers(TEAM_MEMBERS);
+    }
+  }, [teamMembers]);
 
   const [rawEvents, setRawEvents] = useFirestoreSync<any[]>(
     'calendar-events', 'events', serializeEvents(INITIAL_EVENTS), 'teamsync-calendar-events',

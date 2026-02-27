@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import ReportPreview from './components/ReportPreview';
 import EditorPanel from './components/EditorPanel';
 import { ReportData, ReportType } from './types';
@@ -14,8 +16,6 @@ interface CalendarLinkState {
   type: 'manufacturing' | 'packaging';
   mode?: 'write' | 'view';
 }
-
-const STORAGE_KEY_COMPLETED = 'teamsync-completed-reports';
 
 const initialData: ReportData = {
   reportType: 'single-manufacturing',
@@ -110,50 +110,74 @@ const ReportApp: React.FC = () => {
     }));
   }, [reportData.language]);
 
-  // Feature 1: Pre-populate from calendar event or load saved report for viewing
+  // Feature 1: Pre-populate from calendar event or load saved report
   useEffect(() => {
     const state = location.state as CalendarLinkState | null;
-    if (state?.date && state?.title) {
-      const reportType: ReportType = state.type === 'packaging'
-        ? 'single-filling'
-        : 'single-manufacturing';
+    if (!state?.date || !state?.title) return;
 
-      if (state.eventId) {
-        setLinkedEventId(state.eventId);
-      }
+    const reportType: ReportType = state.type === 'packaging'
+      ? 'single-filling'
+      : 'single-manufacturing';
 
-      // View mode: load saved report data from localStorage
-      if (state.mode === 'view' && state.eventId) {
+    if (state.eventId) {
+      setLinkedEventId(state.eventId);
+    }
+
+    // View mode: load saved report data from Firestore
+    if (state.mode === 'view' && state.eventId) {
+      const eventId = state.eventId;
+      (async () => {
         try {
-          const saved = localStorage.getItem(`teamsync-report-${state.eventId}`);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            setReportData({ ...initialData, ...parsed });
+          const snap = await getDoc(doc(db, 'teamsync', 'reports', 'items', eventId));
+          if (snap.exists()) {
+            setReportData({ ...initialData, ...snap.data() as Partial<ReportData> });
             window.history.replaceState({}, document.title);
             return;
           }
-        } catch { /* fallback to write mode */ }
-      }
+        } catch {
+          // Fallback: try localStorage
+          try {
+            const saved = localStorage.getItem(`teamsync-report-${eventId}`);
+            if (saved) {
+              setReportData({ ...initialData, ...JSON.parse(saved) });
+              window.history.replaceState({}, document.title);
+              return;
+            }
+          } catch { /* ignore */ }
+        }
 
-      // Write mode: pre-populate from calendar event
-      setReportData(prev => ({
-        ...prev,
-        date: state.date,
-        reportType,
-        info: prev.info.map(item =>
-          (item.label.includes('제품명') || item.label.includes('Product')) ? { ...item, value: state.title } : item
-        ),
-      }));
-
-      window.history.replaceState({}, document.title);
+        // If no saved data found, fall through to write mode
+        setReportData(prev => ({
+          ...prev,
+          date: state.date,
+          reportType,
+          info: prev.info.map(item =>
+            (item.label.includes('제품명') || item.label.includes('Product')) ? { ...item, value: state.title } : item
+          ),
+        }));
+        window.history.replaceState({}, document.title);
+      })();
+      return;
     }
+
+    // Write mode: pre-populate from calendar event
+    setReportData(prev => ({
+      ...prev,
+      date: state.date,
+      reportType,
+      info: prev.info.map(item =>
+        (item.label.includes('제품명') || item.label.includes('Product')) ? { ...item, value: state.title } : item
+      ),
+    }));
+
+    window.history.replaceState({}, document.title);
   }, []);
 
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     const dataStr = JSON.stringify(reportData, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -163,38 +187,37 @@ const ReportApp: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
 
-    // Persist full report data for later viewing
-    if (linkedEventId) {
+    if (!linkedEventId) return;
+
+    try {
+      // Save report data to Firestore
+      await setDoc(doc(db, 'teamsync', 'reports', 'items', linkedEventId), reportData);
+      // Also save locally as fallback
       localStorage.setItem(`teamsync-report-${linkedEventId}`, dataStr);
+
+      // Update completion records in Firestore
+      const completedSnap = await getDoc(doc(db, 'teamsync', 'completed-reports'));
+      const records: { eventId: string; decision: string; issues: string }[] =
+        completedSnap.exists() ? (completedSnap.data().records || []) : [];
+
+      const newRecord = {
+        eventId: linkedEventId,
+        decision: reportData.decision || '적합',
+        issues: reportData.issues || '',
+      };
+      const existing = records.findIndex(r => r.eventId === linkedEventId);
+      if (existing >= 0) {
+        records[existing] = newRecord;
+      } else {
+        records.push(newRecord);
+      }
+      await setDoc(doc(db, 'teamsync', 'completed-reports'), { records }, { merge: true });
+      localStorage.setItem('teamsync-completed-reports', JSON.stringify(records));
+    } catch (err) {
+      console.warn('Firestore save failed, data saved locally:', err);
     }
 
-    // Mark event as completed with quality data, then return to calendar
-    if (linkedEventId) {
-      try {
-        const records: { eventId: string; decision: string; issues: string }[] =
-          JSON.parse(localStorage.getItem(STORAGE_KEY_COMPLETED) || '[]');
-
-        // Migrate old string[] format if needed
-        const normalized = records.map((r: any) =>
-          typeof r === 'string' ? { eventId: r, decision: '적합', issues: '' } : r
-        );
-
-        const existing = normalized.findIndex((r: any) => r.eventId === linkedEventId);
-        const newRecord = {
-          eventId: linkedEventId,
-          decision: reportData.decision || '적합',
-          issues: reportData.issues || '',
-        };
-
-        if (existing >= 0) {
-          normalized[existing] = newRecord;
-        } else {
-          normalized.push(newRecord);
-        }
-        localStorage.setItem(STORAGE_KEY_COMPLETED, JSON.stringify(normalized));
-      } catch { /* ignore */ }
-      navigate('/calendar');
-    }
+    navigate('/calendar');
   }, [reportData, linkedEventId, navigate]);
 
   const handleExportPdf = useCallback(async () => {

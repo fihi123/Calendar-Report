@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   format,
@@ -33,38 +33,7 @@ import { TeamManagerModal } from './components/TeamManagerModal';
 import StatusSidebar from './components/StatusSidebar';
 import { TEAM_MEMBERS, INITIAL_EVENTS } from './constants';
 import { CalendarEvent, EventType, TeamMember } from './types';
-
-const STORAGE_KEY_TEAM = 'teamsync-team-members';
-const STORAGE_KEY_EVENTS = 'teamsync-calendar-events';
-const STORAGE_KEY_COMPLETED = 'teamsync-completed-reports';
-
-const loadTeamMembers = (): TeamMember[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_TEAM);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch { /* ignore corrupt data */ }
-  return TEAM_MEMBERS;
-};
-
-const loadEvents = (): CalendarEvent[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_EVENTS);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((e: any) => ({
-          ...e,
-          start: new Date(e.start),
-          end: new Date(e.end),
-        }));
-      }
-    }
-  } catch { /* ignore */ }
-  return INITIAL_EVENTS;
-};
+import { useFirestoreSync } from '../../hooks/useFirestoreSync';
 
 export interface CompletionRecord {
   eventId: string;
@@ -72,35 +41,41 @@ export interface CompletionRecord {
   issues: string;
 }
 
-const loadCompletionRecords = (): CompletionRecord[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_COMPLETED);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Migrate: old format was string[], new format is CompletionRecord[]
-        if (typeof parsed[0] === 'string') {
-          return parsed.map((id: string) => ({ eventId: id, decision: '적합', issues: '' }));
-        }
-        return parsed;
-      }
-    }
-  } catch { /* ignore */ }
-  return [];
-};
+// Serialize CalendarEvent dates to ISO strings for Firestore storage
+const serializeEvents = (events: CalendarEvent[]) =>
+  events.map(e => ({ ...e, start: e.start instanceof Date ? e.start.toISOString() : e.start, end: e.end instanceof Date ? e.end.toISOString() : e.end }));
+
+// Deserialize ISO strings back to Date objects
+const deserializeEvents = (events: any[]): CalendarEvent[] =>
+  events.map(e => ({ ...e, start: new Date(e.start), end: new Date(e.end) }));
 
 const CalendarApp: React.FC = () => {
   const navigate = useNavigate();
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(loadTeamMembers);
+
+  // --- Firestore real-time sync ---
+  const [teamMembers, setTeamMembers] = useFirestoreSync<TeamMember[]>(
+    'team-members', 'members', TEAM_MEMBERS, 'teamsync-team-members',
+  );
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_TEAM, JSON.stringify(teamMembers));
-  }, [teamMembers]);
+  const [rawEvents, setRawEvents] = useFirestoreSync<any[]>(
+    'calendar-events', 'events', serializeEvents(INITIAL_EVENTS), 'teamsync-calendar-events',
+  );
+  // Deserialize dates for component use
+  const events = useMemo(() => deserializeEvents(rawEvents), [rawEvents]);
+  const setEvents = (updater: CalendarEvent[] | ((prev: CalendarEvent[]) => CalendarEvent[])) => {
+    if (typeof updater === 'function') {
+      setRawEvents((prev) => serializeEvents(updater(deserializeEvents(prev))));
+    } else {
+      setRawEvents(serializeEvents(updater));
+    }
+  };
+
+  const [completionRecords, setCompletionRecords] = useFirestoreSync<CompletionRecord[]>(
+    'completed-reports', 'records', [], 'teamsync-completed-reports',
+  );
 
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState<CalendarEvent[]>(loadEvents);
-  const [completionRecords, setCompletionRecords] = useState<CompletionRecord[]>(loadCompletionRecords);
 
   const completedEventIds = useMemo(
     () => new Set(completionRecords.map(r => r.eventId)),
@@ -116,21 +91,6 @@ const CalendarApp: React.FC = () => {
   const [newEventType, setNewEventType] = useState<EventType>('manufacturing');
   const [newEventStart, setNewEventStart] = useState('');
   const [newEventEnd, setNewEventEnd] = useState('');
-
-  // Persist events to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(events));
-  }, [events]);
-
-  // Reload completion records on focus (when returning from report page)
-  useEffect(() => {
-    const handleFocus = () => {
-      setCompletionRecords(loadCompletionRecords());
-    };
-    window.addEventListener('focus', handleFocus);
-    setCompletionRecords(loadCompletionRecords());
-    return () => window.removeEventListener('focus', handleFocus);
-  }, []);
 
   const daysInMonth = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 });
